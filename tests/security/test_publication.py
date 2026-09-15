@@ -1,4 +1,5 @@
 """Exercise publication checks in disposable repositories with synthetic secrets."""
+import json
 import os
 from pathlib import Path
 import secrets
@@ -9,6 +10,8 @@ import tempfile
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts/check_secrets.py"
+CONFIG = SCRIPT.parents[1] / ".gitleaks.toml"
+CHECKSUMS = SCRIPT.parents[1] / "tests/display/landscape.sha256.json"
 
 
 class PublicationChecks(unittest.TestCase):
@@ -20,6 +23,7 @@ class PublicationChecks(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "scripts").mkdir()
         shutil.copyfile(SCRIPT, self.root / "scripts/check_secrets.py")
+        shutil.copyfile(CONFIG, self.root / ".gitleaks.toml")
         (self.root / ".gitignore").write_text(".env\nartifacts/\n")
         self.git("init", "--quiet", "--initial-branch=main")
 
@@ -63,6 +67,48 @@ class PublicationChecks(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "--quiet", "-m", "Synthetic scanner fixture")
         path.unlink()
+        result = self.scan()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertNotIn(canary, result.stdout + result.stderr)
+
+    def write_checksums(self, values, relative="tests/display/landscape.sha256.json"):
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(values, indent=2) + "\n")
+        return path
+
+    def test_known_image_checksums_pass_in_candidate_and_history(self):
+        path = self.write_checksums(json.loads(CHECKSUMS.read_text()))
+        self.git("add", ".")
+        self.git("commit", "--quiet", "-m", "Synthetic landscape checksums")
+        result = self.scan()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # The historical values stay allowed even when the file is later removed.
+        path.unlink()
+        result = self.scan()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_other_secrets_in_checksum_file_are_rejected(self):
+        original = json.loads(CHECKSUMS.read_text())
+        for key in ("auth-failed", "api_key"):
+            with self.subTest(key=key):
+                canary = secrets.token_hex(32)
+                self.write_checksums(dict(original, **{key: canary}))
+                result = self.scan()
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn(canary, result.stdout + result.stderr)
+
+    def test_checksum_exception_does_not_apply_to_other_files(self):
+        original = json.loads(CHECKSUMS.read_text())
+        self.write_checksums({"auth-failed": original["auth-failed"]}, "config.json")
+        result = self.scan()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_checksum_exception_does_not_hide_an_appended_secret(self):
+        original = json.loads(CHECKSUMS.read_text())
+        path = self.write_checksums({"auth-failed": original["auth-failed"]})
+        canary = secrets.token_hex(32)
+        path.write_text(path.read_text().replace('\n}', ', "api_key": "' + canary + '"\n}'))
         result = self.scan()
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertNotIn(canary, result.stdout + result.stderr)

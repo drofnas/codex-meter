@@ -49,6 +49,9 @@ weekday colors, and offline calendar-boundary transitions. The 90 hashes in
 `tests/display/landscape.sha256.json` preserve both landscape views from commit
 `d62e74c` using synthetic PPM renders. Keep these baselines unchanged for
 portrait-only work; update them only for an intentional landscape change.
+The auth-failure fixture names trigger Gitleaks' generic API-key heuristic.
+`.gitleaks.toml` allows only their exact known checksum entries in that file;
+publication tests verify that other values, files, and appended secrets still fail.
 After changing firmware, also inspect the actual LCD, title-tap rotation, and
 stale/recovery behavior on your device using the normal build/flash commands.
 
