@@ -112,6 +112,45 @@ def portrait_pixels(image, frame):
         assert all(pixel(x,y)==bg for y in range(32) for x in range(88,240)), 'unexpected header status'
 
 
+def landscape_pixels(image, frame):
+    magic, dimensions, maximum, pixels = image.read_bytes().split(b'\n',3)
+    assert (magic, dimensions, maximum)==(b'P6',b'320 240',b'255')
+    assert len(pixels)==320*240*3
+    def rgb(color):
+        return bytes(((color>>16)&0xE0,(color>>8)&0xE0,color&0xC0))
+    bg, track, ink, muted = map(rgb,(0x101820,0x324450,0xF3F6F7,0xAAB8C2))
+    good, yellow = map(rgb,(0x63DFC1,0xFFE060))
+    def pixel(x,y):
+        return pixels[(y*320+x)*3:(y*320+x)*3+3]
+    def colors(left,top,width,height):
+        return {pixel(x,y) for y in range(top,top+height) for x in range(left,left+width)}
+    count=len(frame['bars'])
+    for i,b in enumerate(frame['bars']):
+        center=12+(2*i+1)*296//(2*count)
+        width=min(22,296//count-6); left=center-width//2
+        fill=yellow if i==frame['today'] else good if b['coverage'] in ('C','P') else muted
+        # Check every bar pixel, including empty space, to reject residual stripes/highlights.
+        for y in range(159,197):
+            assert all(pixel(x,y)==(fill if y>=197-b['height'] else bg)
+                       for x in range(left,left+width)), (image.name,i,'solid fill')
+        assert colors(left,197,width,1)=={track}
+        value_width=6*len(b['value'])-1
+        assert colors(center-value_width//2,151,value_width,7)=={bg,fill}, (image.name,i,'value color')
+        label_width=(6*len(b['label'])-1)*2
+        label_color=yellow if i==frame['today'] else muted if b['coverage']=='F' else ink
+        assert colors(center-label_width//2,203,label_width,14)=={bg,label_color}, (image.name,i,'weekday color')
+    assert colors(0,218,320,22)=={bg}, 'unexpected footer'
+    assert colors(180,73,140,15)=={bg}, 'unexpected age text'
+    assert colors(90,138,230,7)=={bg}, 'unexpected scale callout'
+    header_colors=colors(88,0,232,32)
+    if frame['resets']:
+        assert header_colors=={bg,rgb(frame['resets_color'])}, 'reset counter color'
+        assert colors(308,0,12,32)=={bg}, 'reset counter right margin'
+        assert colors(88,24,232,8)=={bg}, 'reset counter below header'
+    else:
+        assert header_colors=={bg}, 'unexpected header status'
+
+
 def run(output):
     OUT = output.resolve()
     if not OUT.is_relative_to(ROOT / 'artifacts'):
@@ -191,9 +230,9 @@ def run(output):
                         assert b['portrait_label']==labels[d['label']]
                         expired_future = d['coverage'] == 'future' and d['start_at'] <= value['as_of'] + elapsed//1000
                         if d['coverage'] == 'unknown' or expired_future: assert b['value'] == '?' and b['height'] == 0
-                        elif d['coverage'] == 'future': assert b['value'] == '0>' and b['height'] == 0
+                        elif d['coverage'] == 'future': assert b['value'] == '0' and b['height'] == 0
                         else:
-                            assert b['value'].startswith('~') == (d['coverage'] == 'partial')
+                            assert b['value']==str(math.floor(d['used_delta_pp']+.5))
                             assert (b['height'] == 0) == (d['used_delta_pp'] == 0)
                             assert 0 <= b['height'] <= 38
                         if d['coverage']=='unknown' or expired_future:
@@ -209,6 +248,7 @@ def run(output):
                 if name == 'zeros-and-fraction': assert f['quota'] == '<1%'
                 if name == 'zero-remaining': assert f['quota'] == '0%' and f['gauge'] == 0
                 if position%2: portrait_pixels(image,f)
+                else: landscape_pixels(image,f)
                 manifest.append(dict(name=name_with_position, scenario=label, position=position,
                                      width=240 if position % 2 else 320, height=320 if position % 2 else 240,
                                      frame=f, ppm=str(image.relative_to(ROOT))))
@@ -217,7 +257,7 @@ def run(output):
     summary = dict(oracle_fixtures=len(cases), rendered_cases=len(manifest), sanitized_bounds='passed',
                    frame_bytes=max(frame_bytes), iterations_per_case=100, orientations=4,
                    orientation_input_persistence='passed',
-                   portrait_pixels='passed', landscape_unchanged=len(landscape_checked),
+                   portrait_pixels='passed', landscape_pixels='passed', landscape_baselines=len(landscape_checked),
                    sanitized_render_mean_us_min=min(timings), sanitized_render_mean_us_max=max(timings))
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     (OUT/'measurement.json').write_text(json.dumps(summary, indent=2)+'\n')

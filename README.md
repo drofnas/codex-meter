@@ -11,12 +11,12 @@ The LCD shows weekly capacity remaining, a horizontal gauge, the source's local
 bars anchored to the current reset period (including both partial reset dates).
 The [v2 API](contracts/v2/README.md) keeps at least 35 days of daily aggregates for
 future history views. Days without observations show `?`.
-Landscape shows `FRESH`, `STALE`, and `WAIT` plus observation age. Its partial
-values use `~` and striped bars; unknown history uses `?`; future zero uses `0>`.
-Portrait places the reset counter in the header and shows daily usage as a list
-of solid horizontal bars with whole percentages or `?`. Today's weekday and bar
-are yellow; other days use the weekly blue/cyan color. Its reset date/time fits
-on one line, with no status, age, or legend. Both layouts retain the weekly
+Both layouts place the reset counter in the top-right header and label the daily
+section `DAILY USAGE %`, with no status, age, or legend. Landscape uses solid
+vertical bars with plain whole numbers; portrait uses horizontal bars with whole
+percentages. Unknown history shows `?`, and future days show `0` (`0%` in portrait).
+Today's weekday and bar are yellow; other known bars use the weekly blue/cyan
+color. Landscape also highlights today's number. Both layouts retain the weekly
 warning color for stale data and placeholders for missing readings.
 The hardware configuration and constrained buffer retain the verified baseline.
 
@@ -33,7 +33,7 @@ Rendered directly from the firmware UI with synthetic example data.
 
 | Landscape | Portrait |
 | :---: | :---: |
-| <img src="docs/images/landscape.png" width="320" height="240" alt="Landscape display showing 55% weekly capacity remaining, freshness, reset time, and daily usage bars"> | <img src="docs/images/portrait.png" width="240" height="320" alt="Portrait display showing 64% weekly capacity remaining, two available resets, and eight daily progress bars with Tuesday highlighted yellow"> |
+| <img src="docs/images/landscape.png" width="320" height="240" alt="Landscape display showing 64% weekly capacity remaining, two available resets in the header, and eight daily usage bars with plain numbers and Tuesday highlighted yellow"> | <img src="docs/images/portrait.png" width="240" height="320" alt="Portrait display showing 64% weekly capacity remaining, two available resets, and eight daily progress bars with Tuesday highlighted yellow"> |
 
 ## Install and run
 

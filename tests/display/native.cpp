@@ -85,12 +85,12 @@ int main(int argc,char **argv) {
   auto before=meter::ui::project(s,0,true);
   if(m.observed>=0 && now>=180000)assert(!meter::ui::equal(before,f));
   Canvas c(position); meter::ui::draw(c,f,position); c.save(argv[2]); emit(f);
-  if(position&1) {
-    // Hidden legacy status/age/coverage text must not leak into portrait pixels.
+  {
+    // Status, age, and partial coverage must not alter either layout's pixels.
     auto hidden=f;
     std::strcpy(hidden.status,"XXXXX"); std::strcpy(hidden.age,"XXXXXXXXXXXX");
     for(int i=0;i<hidden.day_count;++i) {
-      std::strcpy(hidden.bars[i].value,"~>99");
+      if(position&1) std::strcpy(hidden.bars[i].value,"~>99");
       if(hidden.bars[i].coverage=='P') hidden.bars[i].coverage='C';
     }
     Canvas alternate(position); meter::ui::draw(alternate,hidden,position);
