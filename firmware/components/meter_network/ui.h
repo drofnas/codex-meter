@@ -52,12 +52,14 @@ inline Frame project(const State &state, uint64_t now, bool wifi) {
   else std::snprintf(f.quota, sizeof(f.quota), "%.0f%%", m.remaining);
   f.gauge = static_cast<uint16_t>(std::lround(m.remaining * 296 / 100));
   std::memcpy(f.date,m.reset_local,10); f.date[10]=0;
-  const int hour=(m.reset_local[11]-'0')*10+m.reset_local[12]-'0';
-  std::snprintf(f.time,sizeof(f.time),"%d:%.2s %s",hour%12?hour%12:12,m.reset_local+14,hour<12?"AM":"PM");
+  const unsigned hour=(m.reset_local[11]-'0')*10+m.reset_local[12]-'0';
+  std::snprintf(f.time,sizeof(f.time),"%u:%.2s %s",hour%12?hour%12:12,m.reset_local+14,hour<12?"AM":"PM");
   std::snprintf(f.reset,sizeof(f.reset),"%s %s",f.date,f.time);
-  const int oh=(m.reset_local[18]-'0')*10+m.reset_local[19]-'0', om=(m.reset_local[21]-'0')*10+m.reset_local[22]-'0';
-  if(om) std::snprintf(f.offset,sizeof(f.offset),"(%c%d:%02d)",m.reset_local[17],oh,om);
-  else if(oh) std::snprintf(f.offset,sizeof(f.offset),"(%c%d)",m.reset_local[17],oh);
+  // The decoder validates these digits; explicit bounds also prove the buffer sizes to GCC.
+  const unsigned oh=static_cast<unsigned>((m.reset_local[18]-'0')*10+m.reset_local[19]-'0')%100;
+  const unsigned om=static_cast<unsigned>((m.reset_local[21]-'0')*10+m.reset_local[22]-'0')%100;
+  if(om) std::snprintf(f.offset,sizeof(f.offset),"(%c%u:%02u)",m.reset_local[17],oh,om);
+  else if(oh) std::snprintf(f.offset,sizeof(f.offset),"(%c%u)",m.reset_local[17],oh);
   else std::strcpy(f.offset,"(0)");
   f.day_count=m.day_count;
   f.reset_due = state.as_of(now) >= static_cast<uint64_t>(m.reset);
