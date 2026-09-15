@@ -1,0 +1,42 @@
+# Run through scripts/api.py: it resolves literal settings and supplies only
+# these explicit values. No host env file, credential path or state is forwarded.
+services:
+  api:
+    build: .
+    image: codex-meter-api:local
+    user: "65532:${API_DATA_GID:?Use scripts/api.py}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: ${API_PIDS_LIMIT:-64}
+    mem_limit: "${API_MEMORY_MIB:-32}m"
+    memswap_limit: "${API_MEMORY_MIB:-32}m"
+    cpus: ${API_CPU_LIMIT:-0.25}
+    restart: unless-stopped
+    stop_grace_period: 6s
+    ports:
+      - target: 8080
+        published: "${METER_API_PORT:-8080}"
+        host_ip: "${METER_API_BIND_ADDRESS:-127.0.0.1}"
+        protocol: tcp
+    environment:
+      METER_DATA_DIR: /data
+      METER_API_BIND_ADDRESS: 0.0.0.0
+      METER_API_PORT: "8080"
+      METER_API_TOKEN: "${METER_API_TOKEN:?Dedicated token required}"
+      METER_TIMEZONE: "${METER_TIMEZONE:?Explicit host timezone required}"
+      METER_STALE_SECONDS: "${METER_STALE_SECONDS:-180}"
+      GOMEMLIMIT: "${API_GO_MEMORY_MIB:-24}MiB"
+      GOMAXPROCS: "2"
+    volumes:
+      - type: bind
+        source: "${METER_DATA_DIR:?Resolved usage directory required}"
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: "2"

@@ -1,0 +1,308 @@
+[
+  {
+    "file": "normal.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "Measured 30pp, partial 15pp, measured current zero, then four future zeros."
+  },
+  {
+    "file": "zero-remaining.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "zero-remaining"
+  },
+  {
+    "file": "unknown-history.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "First install cannot reconstruct earlier daily consumption."
+  },
+  {
+    "file": "unavailable.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "unavailable"
+  },
+  {
+    "file": "unavailable-auth.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "unavailable-auth"
+  },
+  {
+    "file": "stale.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "stale"
+  },
+  {
+    "file": "auth-failed.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "auth-failed"
+  },
+  {
+    "file": "source-timeout.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "source-timeout"
+  },
+  {
+    "file": "clock-backwards.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "clock-backwards"
+  },
+  {
+    "file": "reset-due.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "reset-due"
+  },
+  {
+    "file": "confirmed-reset.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "confirmed-reset"
+  },
+  {
+    "file": "ambiguous-adjustment.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "ambiguous-adjustment"
+  },
+  {
+    "file": "dst-spring.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "Fixed 86400-second slots; labels use the local time at each slot start."
+  },
+  {
+    "file": "dst-fall.json",
+    "kind": "usage",
+    "expect": "valid",
+    "case": "Fixed 86400-second slots; labels use the local time at each slot start."
+  },
+  {
+    "file": "health.json",
+    "kind": "health",
+    "expect": "valid",
+    "case": "health"
+  },
+  {
+    "file": "error-unauthorized.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-unauthorized"
+  },
+  {
+    "file": "error-not_found.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-not_found"
+  },
+  {
+    "file": "error-method_not_allowed.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-method_not_allowed"
+  },
+  {
+    "file": "error-bad_request.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-bad_request"
+  },
+  {
+    "file": "error-snapshot_invalid.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-snapshot_invalid"
+  },
+  {
+    "file": "error-snapshot_oversized.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-snapshot_oversized"
+  },
+  {
+    "file": "error-snapshot_version.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-snapshot_version"
+  },
+  {
+    "file": "error-snapshot_unreadable.json",
+    "kind": "error",
+    "expect": "valid",
+    "case": "error-snapshot_unreadable"
+  },
+  {
+    "file": "unsupported-version.json",
+    "kind": "usage",
+    "expect": "version",
+    "case": "unsupported-version"
+  },
+  {
+    "file": "six-days.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "six-days"
+  },
+  {
+    "file": "eight-days.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "eight-days"
+  },
+  {
+    "file": "negative-remaining.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "negative-remaining"
+  },
+  {
+    "file": "excess-remaining.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "excess-remaining"
+  },
+  {
+    "file": "boolean-remaining.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "boolean-remaining"
+  },
+  {
+    "file": "fractional-time.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "fractional-time"
+  },
+  {
+    "file": "wrong-bucket.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "wrong-bucket"
+  },
+  {
+    "file": "wrong-window.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "wrong-window"
+  },
+  {
+    "file": "bad-age.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "bad-age"
+  },
+  {
+    "file": "wrong-reset.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "wrong-reset"
+  },
+  {
+    "file": "unknown-as-zero.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "unknown-as-zero"
+  },
+  {
+    "file": "future-as-null.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "future-as-null"
+  },
+  {
+    "file": "bad-label.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "bad-label"
+  },
+  {
+    "file": "unclosed-complete.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "unclosed-complete"
+  },
+  {
+    "file": "negative-count.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "negative-count"
+  },
+  {
+    "file": "fractional-count.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "fractional-count"
+  },
+  {
+    "file": "bad-timezone.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "bad-timezone"
+  },
+  {
+    "file": "spoofed-local-date.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "spoofed-local-date"
+  },
+  {
+    "file": "ambiguous-with-history.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "ambiguous-with-history"
+  },
+  {
+    "file": "bad-slot-start.json",
+    "kind": "usage",
+    "expect": "semantics",
+    "case": "bad-slot-start"
+  },
+  {
+    "file": "extra-field.json",
+    "kind": "usage",
+    "expect": "schema",
+    "case": "extra-field"
+  },
+  {
+    "file": "malformed.json",
+    "kind": "usage",
+    "expect": "malformed",
+    "case": "malformed"
+  },
+  {
+    "file": "duplicate-key.json",
+    "kind": "usage",
+    "expect": "malformed",
+    "case": "duplicate-key"
+  },
+  {
+    "file": "non-finite.json",
+    "kind": "usage",
+    "expect": "malformed",
+    "case": "non-finite"
+  },
+  {
+    "file": "overflow-float.json",
+    "kind": "usage",
+    "expect": "malformed",
+    "case": "overflow-float"
+  },
+  {
+    "file": "bad-utf8.json",
+    "kind": "usage",
+    "expect": "malformed",
+    "case": "bad-utf8"
+  },
+  {
+    "file": "oversized.json",
+    "kind": "usage",
+    "expect": "oversized",
+    "case": "Otherwise valid payload; raw wire bytes including whitespace exceed the cap."
+  }
+]

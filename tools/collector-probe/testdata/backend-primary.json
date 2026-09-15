@@ -1,0 +1,28 @@
+{
+  "rate_limit": {
+    "primary_window": {
+      "used_percent": 20,
+      "limit_window_seconds": 604800,
+      "reset_at": 2000000000
+    },
+    "secondary_window": null
+  },
+  "additional_rate_limits": [
+    {
+      "metered_feature": "codex_bengalfox",
+      "rate_limit": {
+        "primary_window": {
+          "used_percent": 99,
+          "limit_window_seconds": 604800,
+          "reset_at": 2000000000
+        }
+      }
+    }
+  ],
+  "rate_limit_reset_credits": {
+    "available_count": 3
+  },
+  "credits": {
+    "balance": "999"
+  }
+}

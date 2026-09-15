@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex usage meter v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "scope",
+    "bucket",
+    "window_minutes",
+    "observed_at",
+    "updated_at",
+    "as_of",
+    "age_seconds",
+    "stale_after_seconds",
+    "status",
+    "reason",
+    "source_error",
+    "remaining_percent",
+    "reset_at",
+    "reset_local",
+    "timezone",
+    "cycle",
+    "days",
+    "resets_available"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bucket": {
+      "const": "codex"
+    },
+    "window_minutes": {
+      "const": 10080
+    },
+    "observed_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/epoch"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/epoch"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "as_of": {
+      "$ref": "#/$defs/epoch"
+    },
+    "age_seconds": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4102444800
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stale_after_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 3600
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "stale",
+        "unavailable"
+      ]
+    },
+    "reason": {
+      "enum": [
+        null,
+        "no_observation",
+        "source_error",
+        "clock_error",
+        "reset_due",
+        "too_old"
+      ]
+    },
+    "source_error": {
+      "enum": [
+        null,
+        "auth_missing",
+        "auth_failed",
+        "source_timeout",
+        "source_unavailable",
+        "source_invalid"
+      ]
+    },
+    "remaining_percent": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reset_at": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/epoch"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reset_local": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 23,
+          "maxLength": 23,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2} [+-]\\d{2}:\\d{2}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_at",
+        "end_at",
+        "state"
+      ],
+      "properties": {
+        "start_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/epoch"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/epoch"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "unknown",
+            "observed",
+            "confirmed",
+            "ambiguous"
+          ]
+        }
+      }
+    },
+    "days": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start_at",
+          "label",
+          "used_delta_pp",
+          "coverage"
+        ],
+        "properties": {
+          "start_at": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/epoch"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "enum": [
+              null,
+              "M",
+              "T",
+              "W",
+              "Th",
+              "F",
+              "Sa",
+              "Su"
+            ]
+          },
+          "used_delta_pp": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "enum": [
+              "unknown",
+              "partial",
+              "complete",
+              "future"
+            ]
+          }
+        }
+      }
+    },
+    "resets_available": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4102444800
+    }
+  }
+}

@@ -1,0 +1,214 @@
+[
+  {
+    "file": "normal.json",
+    "expect": "valid"
+  },
+  {
+    "file": "zero-remaining.json",
+    "expect": "valid"
+  },
+  {
+    "file": "unknown-history.json",
+    "expect": "valid"
+  },
+  {
+    "file": "unavailable.json",
+    "expect": "valid"
+  },
+  {
+    "file": "unavailable-auth.json",
+    "expect": "valid"
+  },
+  {
+    "file": "stale.json",
+    "expect": "valid"
+  },
+  {
+    "file": "auth-failed.json",
+    "expect": "valid"
+  },
+  {
+    "file": "source-timeout.json",
+    "expect": "valid"
+  },
+  {
+    "file": "clock-backwards.json",
+    "expect": "valid"
+  },
+  {
+    "file": "reset-due.json",
+    "expect": "valid"
+  },
+  {
+    "file": "confirmed-reset.json",
+    "expect": "valid"
+  },
+  {
+    "file": "ambiguous-adjustment.json",
+    "expect": "valid"
+  },
+  {
+    "file": "dst-spring.json",
+    "expect": "valid"
+  },
+  {
+    "file": "dst-fall.json",
+    "expect": "valid"
+  },
+  {
+    "file": "saturday-eight.json",
+    "expect": "valid"
+  },
+  {
+    "file": "saturday-five-am.json",
+    "expect": "valid"
+  },
+  {
+    "file": "spring-nine.json",
+    "expect": "valid"
+  },
+  {
+    "file": "fall-eight.json",
+    "expect": "valid"
+  },
+  {
+    "file": "noon.json",
+    "expect": "valid"
+  },
+  {
+    "file": "fractional-offset.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-blue.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-seven-days.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-four-days.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-red.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-one-second.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-zero.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-unknown.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-null-expiry.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-max-count.json",
+    "expect": "valid"
+  },
+  {
+    "file": "resets-stale.json",
+    "expect": "valid"
+  },
+  {
+    "file": "bad-version.json",
+    "expect": "version"
+  },
+  {
+    "file": "six-days.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "ten-days.json",
+    "expect": "schema"
+  },
+  {
+    "file": "bad-slot-start.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "bad-slot-end.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "reversed-interval.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "wrong-calendar-boundary.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "bad-label.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "bad-timezone.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "unclosed-complete.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "excess-total.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "unknown-as-zero.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "future-as-null.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "missing-end.json",
+    "expect": "schema"
+  },
+  {
+    "file": "extra-field.json",
+    "expect": "schema"
+  },
+  {
+    "file": "resets-bad-expiry.json",
+    "expect": "schema"
+  },
+  {
+    "file": "resets-fractional-expiry.json",
+    "expect": "schema"
+  },
+  {
+    "file": "resets-expiry-without-count.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "resets-expiry-with-zero.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "resets-expiry-before-observation.json",
+    "expect": "semantics"
+  },
+  {
+    "file": "duplicate-key.json",
+    "expect": "malformed"
+  },
+  {
+    "file": "oversized.json",
+    "expect": "oversized"
+  },
+  {
+    "file": "malformed.json",
+    "expect": "malformed"
+  }
+]

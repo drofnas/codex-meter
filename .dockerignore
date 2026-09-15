@@ -1,0 +1,13 @@
+# Allow only the API source into the build context, including intermediate layers.
+**
+!go.mod
+!internal/
+!internal/api/
+!internal/api/*.go
+!internal/calendar/
+!internal/calendar/*.go
+!cmd/
+!cmd/meter-api/
+!cmd/meter-api/*.go
+!Dockerfile
+!.dockerignore

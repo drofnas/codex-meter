@@ -1,0 +1,22 @@
+.DS_Store
+.esphome/
+.venv/
+__pycache__/
+secrets.yaml
+secrets.*.yaml
+*.local.yaml
+artifacts/
+.env
+.env.*
+!.env.example
+!secrets.example.yaml
+/.local/
+# Firmware embeds local Wi-Fi credentials and the dedicated meter token.
+*.bin
+*.elf
+*.map
+*.log
+*.jsonl
+*.pem
+*.key
+auth.json

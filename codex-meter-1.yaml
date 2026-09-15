@@ -1,0 +1,122 @@
+# Private Wi-Fi meter with weekly quota, reset time and current-cycle history.
+esphome:
+  name: codex-meter-1
+  friendly_name: Codex Meter 1
+  min_version: 2026.8.0
+
+esp32:
+  variant: esp32
+  flash_size: 4MB
+  flash_mode: dio
+  flash_frequency: 40MHz
+  framework:
+    type: esp-idf
+    version: 5.5.5
+
+logger:
+  baud_rate: 115200
+  level: INFO
+  logs:
+    wifi: ERROR
+    wifi_esp32: ERROR
+
+external_components:
+  - source:
+      type: local
+      path: firmware/components
+    components: [meter_network]
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s
+  power_save_mode: none
+
+meter_network:
+  id: usage_client
+  display: cyd_display
+  # Raw ranges from the XPT2046 example; axis direction checked on this panel.
+  # Coordinates and transforms describe the ORIGINAL landscape orientation.
+  touch_calibration: &touch_calibration
+    x_min: 280
+    x_max: 3860
+    y_min: 340
+    y_max: 3860
+  touch_transform:
+    # On this CYD raw X runs down and raw Y runs right in original landscape.
+    swap_xy: true
+    mirror_x: false
+    mirror_y: false
+  url: !secret meter_api_url
+  token: !secret meter_api_token
+  poll_interval: !secret meter_poll_interval
+  timeout: !secret meter_http_timeout
+
+spi:
+  - id: lcd_spi
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    # The LCD is write-only. GPIO12 is also a flash-voltage strapping pin.
+  - id: touch_spi
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
+
+touchscreen:
+  - platform: xpt2046
+    id: cyd_touch
+    display: cyd_display
+    spi_id: touch_spi
+    cs_pin: GPIO33
+    interrupt_pin: GPIO36
+    threshold: 400
+    touch_timeout: 50ms
+    calibration: *touch_calibration
+    # Feed raw coordinates to the orientation controller. Keep this transform
+    # unset: a second transform here would also change x_raw/y_raw.
+    on_touch:
+      - lambda: |-
+          id(usage_client).touch_press(touch.x_raw, touch.y_raw);
+    on_update:
+      - lambda: |-
+          for (const auto &point : touches) {
+            if (point.state == touchscreen::STATE_PRESSED || point.state == touchscreen::STATE_UPDATED)
+              id(usage_client).touch_move(point.x_raw, point.y_raw);
+          }
+    on_release:
+      - lambda: |-
+          id(usage_client).touch_release();
+
+display:
+  - platform: mipi_spi
+    id: cyd_display
+    model: ESP32-2432S028
+    spi_id: lcd_spi
+    enable_pin: GPIO21
+    data_rate: 10MHz
+    color_order: bgr
+    invert_colors: false
+    rotation: 90
+    color_depth: 8bit
+    buffer_size: 25%
+    auto_clear_enabled: false
+    update_interval: never
+    # LCD reset is wired to board EN. GPIO33 is a touch pin, not LCD reset.
+    lambda: |-
+      id(usage_client).draw(it);
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(usage_client).prepare_display()) {
+            const auto start = meter::monotonic_ms();
+            id(cyd_display).update();
+            id(usage_client).display_updated(meter::monotonic_ms() - start);
+          }
+  - interval: 10s
+    then:
+      - lambda: |-
+          ESP_LOGI("smoke_test", "alive uptime=%lus free_heap=%u bytes",
+                   static_cast<unsigned long>(millis() / 1000),
+                   static_cast<unsigned>(esp_get_free_heap_size()));
