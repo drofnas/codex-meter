@@ -44,6 +44,11 @@ Use a C++17 compiler and the development environment from
 These check parsing, HTTP framing/deadlines, cached state, drawing bounds, all
 four orientations, touch calibration, and preference persistence. Native checks
 use AddressSanitizer and UndefinedBehaviorSanitizer; no device is flashed.
+Display checks also validate portrait daily values, solid fills, text contrast,
+weekday colors, and offline calendar-boundary transitions. The 90 hashes in
+`tests/display/landscape.sha256.json` preserve both landscape views from commit
+`d62e74c` using synthetic PPM renders. Keep these baselines unchanged for
+portrait-only work; update them only for an intentional landscape change.
 After changing firmware, also inspect the actual LCD, title-tap rotation, and
 stale/recovery behavior on your device using the normal build/flash commands.
 
