@@ -23,6 +23,14 @@ literal LAN IPv4 address, explicitly bind the API to that address, and use the
 same token in the API settings. HTTP is plaintext on the selected trusted LAN.
 Read the [security and privacy boundaries](SECURITY.md) before deploying or sharing artifacts.
 
+## Display preview
+
+Rendered directly from the firmware UI with synthetic example data.
+
+| Landscape | Portrait |
+| :---: | :---: |
+| <img src="docs/images/landscape.png" width="320" height="240" alt="Landscape display showing 55% weekly capacity remaining, freshness, reset time, and daily usage bars"> | <img src="docs/images/portrait.png" width="240" height="320" alt="Portrait display showing the same usage data in a vertical layout"> |
+
 ## Install and run
 
 Follow the [macOS installation guide](docs/installation.md) to configure private
@@ -124,13 +132,13 @@ are not copied back; edit this repository and sync again for subsequent changes.
 | `firmware/`, `codex-meter-1.yaml` | ESPHome component and board configuration. |
 | `contracts/` | Versioned protocol schemas and synthetic fixtures used by the tests. |
 | `tests/` | Maintained development checks; not required by the running service. |
-| `docs/installation.md` | Desktop service setup and operation. |
+| `docs/` | Desktop service installation guide and synthetic UI screenshots. |
 | `.local/`, `secrets.yaml` | Ignored installation state and private configuration. |
 | `.esphome/`, `artifacts/` | Ignored generated builds, optional test output, and private backups. |
 
 Firmware binaries embed Wi-Fi credentials and the meter token. Keep all personal
 builds, screenshots, and serial/usage captures private. Publish source and synthetic
-fixtures only.
+examples only.
 
 ## Development and license
 
