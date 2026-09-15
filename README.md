@@ -20,6 +20,10 @@ color. Landscape also highlights today's number. Both layouts retain the weekly
 warning color for stale data and placeholders for missing readings.
 The hardware configuration and constrained buffer retain the verified baseline.
 
+Daily values estimate percentage points of weekly allowance consumed, not raw
+tokens. Small quota corrections and reset-time changes preserve recorded totals;
+correction rebounds are not counted twice. Gaps can leave daily estimates partial.
+
 Tap **CODEX** to rotate the view; the selected orientation survives restart.
 Wi-Fi is enabled with disconnect-driven reboots disabled. The API URL, dedicated token and Wi-Fi credentials
 belong in ignored `secrets.yaml`; start from `secrets.example.yaml`. Use the Mac's

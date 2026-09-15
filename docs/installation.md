@@ -115,6 +115,12 @@ at 64 KiB, with at most eight reset periods. `installation.key` is 32 bytes.
 Atomic, synced replacement keeps the current observation and archive in one
 private commit. Public usage and history files are independently replaced;
 compare their publication timestamps when reading both endpoints.
+Private state v4 also stores the highest observed usage so a percentage correction
+and rebound cannot double-count daily consumption. Small reset-time changes (up
+to five minutes from the fixed anchor) preserve approximate calendar-day totals.
+The collector keeps owner-only `observation.pre-v4.json` and
+`observation.previous.json` backups, each at most 64 KiB: the original upgraded
+record and the last established ledger before its calendar was replaced.
 OS locks and fixed temporary filenames do not accumulate debris. The reconciler
 replaces a small `api-status.json` record. LaunchAgent stdout/stderr go to
 `/dev/null`; Docker logs rotate at two 1 MiB files. Build caches remain separate.
@@ -144,14 +150,18 @@ and downloads only the current period. Changing accounts clears the previous
 account's retained history. A timezone change keeps completed periods in their
 original timezone and preserves only matching intervals in the active period.
 
-Upgrading from private state versions 1 or 2 saves a single owner-only
-`observation.pre-v3.json` backup, retains the observation and reset anchor, and
-starts collecting calendar history forward. Existing unobserved dates show `?`.
-Upgrade the collector/API and firmware together, and change `meter_api_url` in
-firmware secrets to `/v2/usage`; v1 clients reject the new payload. Before a
-rollback, stop collection and preserve the current state/history and binaries.
+Upgrading from private state version 3 to version 4 preserves daily totals and
+archives, initializes the correction baseline, and saves the exact original in
+`observation.pre-v4.json`. Versions 1 and 2 use the same backup and retain the
+observation and reset anchor, but start collecting calendar history forward.
+Existing unobserved dates show `?`.
+The v3-to-v4 private-state upgrade changes only the collector; an existing v2 API
+and firmware need no update. When upgrading an older v1 public protocol
+installation, upgrade the collector/API and firmware together and change
+`meter_api_url` in firmware secrets to `/v2/usage`; v1 clients reject the new payload.
+Before a rollback, stop collection and preserve the current state/history and binaries.
 Restore the pre-upgrade state with the matching older collector/API and firmware;
-that older version cannot read the v3 private archive. Keep the installation key
+that older version cannot read the v4 private archive. Keep the installation key
 and credentials unchanged.
 
 For the optional reset-expiration upgrade, stop collection and save a matching

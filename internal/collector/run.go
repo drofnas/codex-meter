@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func (e *engine) apply(obs Observation, sourceErr error, now int64) (Snapshot, e
 			sourceErr = errSourceInvalid
 		} else if prev := candidate.Observation; prev != nil && prev.Scope == obs.Scope && obs.ObservedAt == prev.ObservedAt && !equalObservation(*prev, obs) {
 			sourceErr = errSourceInvalid
-			candidate.History.State, candidate.History.BaselineUsable = "ambiguous", false
+			candidate.History.BaselineUsable = false
 		} else {
 			previous := candidate.Observation
 			candidate.History.accept(previous, obs, int64(e.config.Interval/time.Second)*2, e.config.Zone)
@@ -71,6 +72,12 @@ func (e *engine) apply(obs Observation, sourceErr error, now int64) (Snapshot, e
 	candidate.prune(now)
 	if len(candidate.Archive) >= maxPeriods {
 		return Snapshot{}, errStorage
+	}
+	calendarChanged := candidate.History.StableEnd != e.state.History.StableEnd || candidate.History.Timezone != e.state.History.Timezone
+	if calendarChanged && slices.ContainsFunc(e.state.History.Days[:], func(d historyDay) bool { return d.Known }) {
+		if err := e.store.backup("observation.previous.json", e.state); err != nil {
+			return Snapshot{}, err
+		}
 	}
 	if err := e.store.publish(candidate, s); err != nil {
 		// Private commit may have succeeded before public rename failed. Reload

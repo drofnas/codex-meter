@@ -12,6 +12,7 @@ type history struct {
 	State          string               `json:"state"`
 	StableEnd      int64                `json:"stable_end"`
 	BaselineUsable bool                 `json:"baseline_usable"`
+	HighUsed       float64              `json:"high_used"`
 	Timezone       string               `json:"timezone"`
 	Count          int                  `json:"count"`
 	Bounds         [9]calendar.Interval `json:"bounds"`
@@ -25,11 +26,11 @@ type historyDay struct {
 }
 
 // Compare against the fixed ledger anchor, never a moving previous timestamp.
-// Live responses have shown isolated one- and two-second reset variations.
-func compatibleReset(a, b int64) bool { return a >= b-2 && a <= b+2 }
+// Daily estimates tolerate clock jitter without letting the anchor drift.
+func compatibleReset(a, b int64) bool { return a >= b-300 && a <= b+300 }
 
 func newHistory(obs Observation, state string, loc *time.Location) history {
-	h := history{State: state, StableEnd: obs.ResetAt, BaselineUsable: true, Timezone: loc.String()}
+	h := history{State: state, StableEnd: obs.ResetAt, BaselineUsable: true, HighUsed: obs.UsedPercent, Timezone: loc.String()}
 	bounds := calendar.Bounds(obs.ResetAt, loc)
 	h.Count = len(bounds)
 	copy(h.Bounds[:], bounds)
@@ -41,6 +42,7 @@ func (h *history) rezone(loc *time.Location) {
 	}
 	fresh := newHistory(Observation{ResetAt: h.StableEnd}, h.State, loc)
 	fresh.BaselineUsable = false
+	fresh.HighUsed = h.HighUsed
 	for i := 0; i < fresh.Count; i++ {
 		for j := 0; j < h.Count; j++ {
 			if fresh.Bounds[i] == h.Bounds[j] {
@@ -66,25 +68,38 @@ func (h *history) accept(previous *Observation, obs Observation, maxGap int64, l
 	}
 	if h.State == "ambiguous" {
 		if obs.ObservedAt-previous.ObservedAt <= maxGap && obs.ResetAt == previous.ResetAt && obs.UsedPercent >= previous.UsedPercent {
-			// Stable new evidence permits forward accounting, not reconstruction of
-			// the uncertain interval or confirmation of an early reset.
-			*h = newHistory(obs, "observed", loc)
+			// Restart sampling without throwing away earlier calendar evidence.
+			fresh := newHistory(obs, "observed", loc)
+			if compatibleReset(obs.ResetAt, h.StableEnd) {
+				fresh.HighUsed = max(h.HighUsed, obs.UsedPercent)
+			}
+			for i, b := range fresh.Bounds[:fresh.Count] {
+				for j, old := range h.Bounds[:h.Count] {
+					if b == old {
+						fresh.Days[i] = h.Days[j]
+					} else if compatibleReset(obs.ResetAt, h.StableEnd) && b.Start < obs.ObservedAt && max(b.Start, old.Start) < min(b.End, old.End) {
+						fresh.Days[i] = historyDay{Used: h.Days[j].Used, Known: h.Days[j].Known}
+					}
+				}
+			}
+			*h = fresh
 		}
 		return
 	}
-	if !compatibleReset(obs.ResetAt, h.StableEnd) || obs.UsedPercent < previous.UsedPercent {
+	if !compatibleReset(obs.ResetAt, h.StableEnd) {
 		h.State, h.BaselineUsable = "ambiguous", false
 		return
 	}
-	if h.BaselineUsable && obs.ObservedAt-previous.ObservedAt <= maxGap {
+	if h.BaselineUsable && obs.ObservedAt-previous.ObservedAt <= maxGap && obs.UsedPercent >= h.HighUsed {
 		from := max(previous.ObservedAt, max(h.StableEnd, previous.ResetAt, obs.ResetAt)-week)
 		to := min(obs.ObservedAt, h.StableEnd, previous.ResetAt, obs.ResetAt)
-		delta := obs.UsedPercent - previous.UsedPercent
+		delta := obs.UsedPercent - h.HighUsed
 		// Only measured zero can be clipped across an uncertain reset edge.
 		if delta == 0 || from == previous.ObservedAt && to == obs.ObservedAt {
 			h.interval(from, to, delta)
 		}
 	}
+	h.HighUsed = max(h.HighUsed, obs.UsedPercent)
 	h.BaselineUsable = h.State != "ambiguous"
 }
 
@@ -121,9 +136,8 @@ func (h *history) interval(from, to int64, delta float64) {
 		total += d.Used
 	}
 	if total > 100+1e-9 {
-		// A normalized quota ledger cannot represent more than a full allowance.
-		// Treat meaningful excess as ambiguity, never clip it into a valid bar.
-		h.State, h.BaselineUsable = "ambiguous", false
+		// Keep the existing estimates when an inconsistent increment cannot fit
+		// the wire bound. The uncovered interval leaves this day partial.
 		return
 	}
 	if total > 100 {
@@ -156,11 +170,11 @@ func (h history) project(s *Snapshot) {
 		}
 		for j, b := range h.Bounds[:h.Count] {
 			d := h.Days[j]
-			if *s.Days[i].StartAt != b.Start || *s.Days[i].EndAt != b.End || !d.Known {
+			if max(*s.Days[i].StartAt, b.Start) >= min(*s.Days[i].EndAt, b.End) || !d.Known {
 				continue
 			}
 			s.Days[i].UsedDelta, s.Days[i].Coverage = ptr(d.Used), "partial"
-			if d.CoveredUntil == b.End && s.AsOf >= b.End {
+			if *s.Days[i].StartAt == b.Start && *s.Days[i].EndAt == b.End && d.CoveredUntil == b.End && s.AsOf >= b.End {
 				s.Days[i].Coverage = "complete"
 			}
 			break
@@ -173,6 +187,9 @@ func (h history) valid(obs *Observation) bool {
 		return h == (history{})
 	}
 	if h.State != "observed" && h.State != "confirmed" && h.State != "ambiguous" || !validEpoch(h.StableEnd) || !validEpoch(h.StableEnd-week) {
+		return false
+	}
+	if math.IsNaN(h.HighUsed) || math.IsInf(h.HighUsed, 0) || h.HighUsed < 0 || h.State != "ambiguous" && h.HighUsed < obs.UsedPercent {
 		return false
 	}
 	if h.State != "ambiguous" && !compatibleReset(h.StableEnd, obs.ResetAt) || h.State == "ambiguous" && h.BaselineUsable {

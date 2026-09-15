@@ -44,7 +44,7 @@ def run(out):
     oracle = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(oracle)
     generated = list((out / "synthetic").glob("*.json"))
-    if len(generated) != 51:
+    if len(generated) != 52:
         raise RuntimeError("synthetic snapshot inventory changed")
     for path in generated:
         oracle.validate_snapshot(path.read_bytes(), version=2)

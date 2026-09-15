@@ -39,21 +39,29 @@ These rules supersede v1's requirement to remain ambiguous until a scheduled
 transition. The wire format and the meaning of unknown/partial/complete do not
 change.
 
-- Source resets within **two seconds** of the fixed private accounting anchor are
+- Source resets within **five minutes** of the fixed private accounting anchor are
   compatible. Preserve the exact source reset in public bounds and reset text.
-  Only exactly matching calendar intervals expose retained totals; changed edge
-  intervals remain unknown. Returning to the anchor restores those matching
-  intervals. Compare to the fixed anchor to prevent cumulative timestamp drift.
+  Overlapping intervals on the same local date expose retained daily estimates.
+  Changed edge intervals are partial, even if the old interval was complete.
+  Compare to the fixed anchor to prevent cumulative timestamp drift.
 - Attribute positive deltas only when the entire observation interval is inside
   both source periods and the accounting period. Zero deltas may be clipped to
   their intersection. Existing gap and midnight attribution rules still apply.
-- A larger reset change, quota decrease, conflicting same-time observation or
-  excessive accumulated quota makes the uncertain history ambiguous. A newer
+- A quota decrease preserves all daily totals. Keep a persistent high-water usage
+  baseline and count only increases above it, so corrections and rebounds cannot
+  double-count allowance. Readings below that baseline do not establish coverage.
+  The weekly gauge still follows the latest source reading. Conflicting same-time
+  observations break interval coverage without hiding or clearing earlier totals.
+  An increment that would exceed 100 accumulated percentage points is skipped;
+  previous totals remain visible. These are approximate quota estimates, not tokens.
+- A larger reset change makes the uncertain history ambiguous. A newer
   nondecreasing reading with exactly the same reset as its predecessor, no more
   than twice the configured collection interval apart, establishes a fresh
-  `observed` baseline. Discard the interval leading into recovery and old active
-  totals. Subsequent compatible readings accumulate partial amounts. Replays,
-  long gaps, continued reset movement and decreasing readings do not recover it.
+  `observed` baseline. Discard the interval leading into recovery, but retain
+  totals for matching calendar intervals (including overlapping edge estimates
+  when recovering minor jitter). Subsequent compatible readings accumulate partial
+  amounts. Replays, long gaps, continued reset movement and decreasing readings
+  do not recover it.
 - Recovery works for persisted ambiguity, including migrated legacy state. It
   does not confirm an early reset or backfill unknown consumption. Scheduled
   transitions retain their existing confirmation requirements using the current
@@ -88,12 +96,17 @@ and the current `as_of`. Invalid history produces a bounded v2 error and cannot
 fall through to the private state or credentials.
 
 The collector atomically commits the current observation and retained snapshots
-in private state v3 (64 KiB cap), then independently replaces public `history.json`
+in private state v4 (64 KiB cap), then independently replaces public `history.json`
 and `usage.json`. Both public files expose publication timestamps; they can
 briefly reflect adjacent publications after interruption. Restart reloads the
-private commit to avoid duplicate attribution. The old v1/v2 private record gets
-one owner-only `observation.pre-v3.json` backup before forward-only migration.
+private commit to avoid duplicate attribution. A v1/v2/v3 private record gets
+one owner-only `observation.pre-v4.json` backup before migration. v3 daily totals
+and archives survive unchanged; v1/v2 retain their forward-only migration.
 Failure to create that backup blocks publication and preserves the original.
+Before replacing an established calendar ledger, the collector also saves one
+bounded owner-only `observation.previous.json` containing the prior private state.
+Neither backup is served by the API. Rollback to an older collector requires its
+matching pre-upgrade state; older collectors cannot read v4.
 
 ## Verification
 

@@ -37,11 +37,7 @@ func TestResetJitterPreservesDaysAndArchive(t *testing.T) {
 			t.Fatal("jitter changed accounting anchor or source reset", s.Cycle)
 		}
 		assertDay(t, s, 2, "partial", ptr(float64(i+2)))
-		if shift == 0 {
-			assertDay(t, s, 0, "partial", ptr(1.0))
-		} else {
-			assertDay(t, s, 0, "unknown", nil)
-		}
+		assertDay(t, s, 0, "partial", ptr(1.0))
 		b, _ := encodeSnapshot(s)
 		emitSynthetic(t, fmt.Sprintf("history-reset-jitter-%d", shift), b)
 		e.state = e.store.load()
@@ -51,7 +47,7 @@ func TestResetJitterPreservesDaysAndArchive(t *testing.T) {
 	}
 	// Comparison is with the fixed anchor: successive one-second moves cannot
 	// ratchet the tolerance, and changing resets cannot establish recovery.
-	for _, shift := range []int64{3, 4} {
+	for _, shift := range []int64{301, 302} {
 		o.ObservedAt += 60
 		o.ResetAt = end + shift
 		s := applyHistory(t, e, o)
@@ -113,7 +109,7 @@ func TestResetJitterClipsOnlyZeroAtCycleStart(t *testing.T) {
 }
 
 func TestPersistedAmbiguityRecoversForward(t *testing.T) {
-	for _, version := range []int{2, 3} {
+	for _, version := range []int{2, 4} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			e := testEngine(t)
 			e.config.Zone, _ = time.LoadLocation("America/Los_Angeles")
