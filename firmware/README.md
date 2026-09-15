@@ -32,7 +32,7 @@ logical touch dimensions at setup. For calibration, capture `meter_rotation` pre
 lines while touching known corners in the original landscape view, determine any
 axis swap/mirroring and calibrated raw limits, then verify the title and nearby
 non-title points in all four positions. Keep physical validation records under
-ignored `artifacts/` and use the [display checks](../tools/display-check/README.md).
+ignored `artifacts/` and use the [display checks](../tests/README.md#firmware-and-display).
 
 The quota number is rounded to the nearest whole percent; positive values below
 1% show `<1%`, and values above 99% but below 100% show `>99%`. The gauge follows
@@ -52,8 +52,8 @@ below the freshness state.
 `meter_display` serial lines record the drawn view and total LCD update duration,
 including all buffer passes and SPI. They contain personal usage data and must
 stay private. The
-ten-second heartbeat remains. Native images and physical checks are documented in
-[tools/display-check](../tools/display-check/README.md).
+ten-second heartbeat remains. Native checks and optional fixture images are documented in
+[tests/README.md](../tests/README.md#firmware-and-display).
 
 Copy `secrets.example.yaml` to ignored `secrets.yaml`, set Wi-Fi and a dedicated
 64-character lowercase hexadecimal API token, and set
@@ -102,10 +102,10 @@ a valid, accepted response.
 
 Run `python3 scripts/firmware.py validate`, `build`, and the documented USB `flash`
 command from the repository. ESPHome Builder mirrors also need their own matching
-private secrets. Native/device checks are documented in
-[tools/firmware-check](../tools/firmware-check/README.md).
+private secrets. Native checks are documented in
+[tests/README.md](../tests/README.md#firmware-and-display).
 
-CM-009 adds a compact reload icon plus available-reset count below the freshness state
+The display includes a compact reload icon plus available-reset count below the freshness state
 on the right, top-aligned with the main percentage, in all four orientations.
 Zero/unknown count leaves no indicator.
 The earliest available expiration controls blue (>7 days), yellow (4–7 days), or

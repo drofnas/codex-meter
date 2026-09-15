@@ -1,7 +1,15 @@
 .DS_Store
+# Local environments, build state, and tool caches.
 .esphome/
 .venv/
 __pycache__/
+.cache/
+go-cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pio/
+.platformio/
 secrets.yaml
 secrets.*.yaml
 *.local.yaml

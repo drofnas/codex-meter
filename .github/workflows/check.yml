@@ -25,22 +25,20 @@ jobs:
           python-version: '3.13'
       - name: Install development checks
         run: |
-          python -m pip install -r tools/contract-check/requirements.txt
+          python -m pip install -r tests/requirements.txt
           go install github.com/zricethezav/gitleaks/v8@v8.30.1
           go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Check secrets and publication paths
         run: |
-          python -m unittest discover -s tools/security-check
+          python -m unittest discover -s tests/security
           python scripts/check_secrets.py
       - name: Check Go vulnerabilities
         run: |
           govulncheck ./...
-          (cd tools/collector-probe && govulncheck ./...)
       - name: Check backend and lifecycle
         run: |
-          python tools/api-check/check.py --output artifacts/ci/backend
-          python -m unittest discover -s tools/lifecycle-check
+          python tests/desktop/check.py
       - name: Check native firmware and display
         run: |
-          python tools/firmware-check/check.py
-          python tools/display-check/check.py --output artifacts/ci/display
+          python tests/firmware/check.py
+          python tests/display/check.py

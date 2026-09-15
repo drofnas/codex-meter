@@ -6,6 +6,7 @@ Use the ESPHome Python (PyYAML required). No private configuration is emitted.
 import argparse
 from pathlib import Path
 import subprocess
+import tempfile
 
 import yaml
 
@@ -38,5 +39,11 @@ def run(output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output',type=Path,default=ROOT/'artifacts/title-rotation/touch-check')
-    run(parser.parse_args().output)
+    parser.add_argument('--output',type=Path,help='Keep results under artifacts/')
+    args = parser.parse_args()
+    if args.output:
+        run(args.output)
+    else:
+        (ROOT / 'artifacts').mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='touch-', dir=ROOT / 'artifacts') as directory:
+            run(Path(directory))

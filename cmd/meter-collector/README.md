@@ -3,7 +3,7 @@
 This Mac process polls the general Codex weekly quota every 60 seconds and
 atomically publishes the [v2 contract](../../contracts/v2/README.md). It reads
 the native credential file on each attempt and only calls the fixed HTTPS
-usage GET selected by CM-001. Codex continues to own sign-in and credential
+usage GET. Codex continues to own sign-in and credential
 renewal. The internal endpoint is a compatibility dependency; a response or
 authentication change produces a fixed error code rather than fabricated quota.
 Keychain-only authentication is not supported by this adapter.
@@ -161,9 +161,8 @@ collector keeps the previous complete file and logs `clock_error` until the
 clock catches up; the API's contract projection can flag the retained future
 timestamp. Passing a reset time without a new observation never renews quota.
 
-Run the [validation workflow](../../tools/collector-check/README.md) before
-staging collector changes. Integrated resource and device acceptance requires
-the separate [acceptance workflow](../../tools/acceptance-check/README.md).
+Run the [desktop checks](../../tests/README.md#desktop-service) before
+staging collector changes. Validate real device behavior separately after firmware changes.
 
 Optional reset-credit details add at most one read-only request per successful
 positive-count poll, within a two-second sub-deadline. The normalized snapshot

@@ -5,21 +5,20 @@ Run with the contract-check Python environment (jsonschema required).
 """
 import argparse
 import copy
-import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'artifacts/cm-007/native'
-SPEC = importlib.util.spec_from_file_location('oracle', ROOT / 'tools/contract-check/validate.py')
+SPEC = importlib.util.spec_from_file_location('oracle', ROOT / 'tests/contracts/validate.py')
 oracle = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(oracle)
-sys.path.insert(0,str(ROOT/'tools/contract-check'))
-from generate_v2 import calendarize
+sys.path.insert(0,str(ROOT/'tests/contracts'))
+from calendar_fixture import calendarize
 
 
 def fixtures():
@@ -59,11 +58,10 @@ def fixtures():
     return result
 
 
-def run(output=OUT, landscape_baseline=None):
+def run(output):
     OUT = output.resolve()
     if not OUT.is_relative_to(ROOT / 'artifacts'):
         raise ValueError('Use an output directory under repository artifacts')
-    baseline = json.loads(landscape_baseline.read_text()) if landscape_baseline else None
     OUT.mkdir(parents=True, exist_ok=True)
     binary = OUT/'render'
     subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-g',
@@ -75,7 +73,6 @@ def run(output=OUT, landscape_baseline=None):
                     str(Path(__file__).with_name('orientation.cpp')), '-o', str(orientation_binary)], check=True)
     subprocess.run([str(orientation_binary)], check=True, timeout=15)
     cases = fixtures(); manifest = []; timings = []; frame_bytes = set()
-    landscape_checked = 0
     for name, value in cases.items():
         raw = json.dumps(value, separators=(',', ':')).encode()
         oracle.validate(raw, 'usage', version=2)
@@ -134,16 +131,12 @@ def run(output=OUT, landscape_baseline=None):
                 if name == 'almost-full': assert f['quota'] == '>99%'
                 if name == 'zeros-and-fraction': assert f['quota'] == '<1%'
                 if name == 'zero-remaining': assert f['quota'] == '0%' and f['gauge'] == 0
-                if baseline is not None and position == 0:
-                    assert hashlib.sha256(image.read_bytes()).hexdigest() == baseline[label], ('landscape pixels changed', label)
-                    landscape_checked += 1
                 manifest.append(dict(name=name_with_position, scenario=label, position=position,
                                      width=240 if position % 2 else 320, height=320 if position % 2 else 240,
                                      frame=f, ppm=str(image.relative_to(ROOT))))
     assert len(frame_bytes)==1 and max(frame_bytes)<=256
     summary = dict(oracle_fixtures=len(cases), rendered_cases=len(manifest), sanitized_bounds='passed',
                    frame_bytes=max(frame_bytes), iterations_per_case=100, orientations=4,
-                   unchanged_landscape_cases=landscape_checked if baseline is not None else None,
                    orientation_input_persistence='passed',
                    sanitized_render_mean_us_min=min(timings), sanitized_render_mean_us_max=max(timings))
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
@@ -153,7 +146,11 @@ def run(output=OUT, landscape_baseline=None):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--output', type=Path, default=OUT)
-    p.add_argument('--landscape-baseline', type=Path, help='JSON of pre-change landscape PPM SHA-256 hashes')
+    p.add_argument('--output', type=Path, help='Keep fixture images and results under artifacts/')
     args = p.parse_args()
-    run(args.output, args.landscape_baseline)
+    if args.output:
+        run(args.output)
+    else:
+        (ROOT / 'artifacts').mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='display-', dir=ROOT / 'artifacts') as directory:
+            run(Path(directory))

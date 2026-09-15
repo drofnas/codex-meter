@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Sanitized native firmware contract, state, framing and deadline checks."""
+import argparse
 import json
 from pathlib import Path
 import socket
 import subprocess
 import threading
 import time
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'artifacts/reset-calendar-days/firmware'
 
 
-def main():
+def run(output):
+    OUT = output.resolve()
+    if not OUT.is_relative_to(ROOT / 'artifacts'):
+        raise ValueError('output must be under repository artifacts')
     OUT.mkdir(parents=True, exist_ok=True)
     binary = OUT / 'check'
     subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-g',
@@ -105,4 +109,13 @@ def main():
                       'host_localization_delegated': sorted(host_localization)}))
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, help='Keep results under artifacts/')
+    args = parser.parse_args()
+    if args.output:
+        run(args.output)
+    else:
+        (ROOT / 'artifacts').mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='firmware-', dir=ROOT / 'artifacts') as directory:
+            run(Path(directory))

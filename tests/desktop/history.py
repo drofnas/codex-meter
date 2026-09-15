@@ -12,14 +12,14 @@ import tempfile
 import time
 
 ROOT=Path(__file__).resolve().parents[2]
-spec=importlib.util.spec_from_file_location('oracle',ROOT/'tools/contract-check/validate.py')
+spec=importlib.util.spec_from_file_location('oracle',ROOT/'tests/contracts/validate.py')
 oracle=importlib.util.module_from_spec(spec);spec.loader.exec_module(oracle)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);args=p.parse_args()
     out=args.output.resolve()
     if not out.is_relative_to(ROOT/'artifacts'):p.error('use repository artifacts')
-    source=out/'collector/synthetic/history/retained.json'
+    source=out/'synthetic/history/retained.json'
     stored=oracle.validate_history(source.read_bytes(),persisted=True)
     with tempfile.TemporaryDirectory(dir=out) as temp:
         data=Path(temp);(data/'history.json').write_bytes(source.read_bytes())

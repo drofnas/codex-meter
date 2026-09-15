@@ -1,16 +1,16 @@
 # Codex usage meter contract v1
 
-This is the normative contract for the new native collector, Docker API and CYD
-consumer. CM-002 supplies schemas, fixtures and a development checker; it does
-not implement those runtimes. The collector probe's output is a source adapter
-experiment, not this wire format.
+This defines the original v1 format. The collector and CYD use
+[v2](../v2/README.md), which inherits the shared rules below. The API retains v1
+validation for snapshots matching that version. Schemas, fixtures and the
+development checker remain as protocol regression coverage.
 
 Validate with both [usage.schema.json](usage.schema.json) and the cross-field
-rules in [validate.py](../../tools/contract-check/validate.py). JSON Schema alone
+rules in [validate.py](../../tests/contracts/validate.py). JSON Schema alone
 cannot check arithmetic, timezone conversion or freshness. Structural schemas use
 [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12). The development
 validator uses [jsonschema](https://pypi.org/project/jsonschema/), not a runtime
-dependency. See [checker instructions](../../tools/contract-check/README.md).
+dependency. See [checker instructions](../../tests/README.md).
 
 ## Wire representation
 
@@ -88,7 +88,7 @@ slot that has opened without observations becomes unknown/null. No history is
 created by projection. For a backwards wall clock, use
 `max(as_of, observed_at, updated_at)`
 to evaluate day coverage, preserving facts from before the jump. The reading is
-still marked with the clock error. [project()](../../tools/contract-check/validate.py)
+still marked with the clock error. [project()](../../tests/contracts/validate.py)
 is an executable reference for this operation.
 
 The CYD preserves the last accepted model on HTTP, parsing or validation failure,
@@ -123,7 +123,7 @@ usage to the current day. Initial history is unknown for elapsed slots and zero
 for future slots. Zero becomes measured only after compatible observations show
 no increase over a covered interval.
 
-The history engine in CM-004 must implement these transition rules:
+The original history engine follows these transition rules:
 
 - Deduplicate by scope, bucket, duration and source observation timestamp.
   Identical repeats contribute nothing. Ignore older observations. Equal-time
@@ -260,7 +260,7 @@ credential directory. Refuse a symlink that defeats these boundaries. Do not
 chmod or rewrite the provider credential file. Create private state owner-only;
 grant the container's selected UID/GID read access only to usage data.
 
-Container wiring in CM-005 passes only its dedicated token, fallback timezone,
+Container wiring passes only its dedicated token, fallback timezone,
 stale threshold and listen settings; never forward the entire host env file.
 Internal container listen can be `0.0.0.0:8080`, while Docker host publication
 uses the explicit `METER_API_BIND_ADDRESS`/port. The sole bind mount is
@@ -271,6 +271,6 @@ and build artifacts are excluded; the two safe examples remain tracked.
 The 120-second freshness objective is measured with the 60-second defaults;
 slower user overrides change that expectation. This contract adds no daemon or
 runtime dependency. The combined native helper/API process-tree budget remains
-below 64 MiB steady RSS and below 1% of one core over 15 minutes. CM-003/005 and
-CM-010 must measure their actual implementations; fixture size alone proves
+below 64 MiB steady RSS and below 1% of one core over 15 minutes. Measure the
+actual implementation on the target host; fixture size alone proves
 only the response budget.

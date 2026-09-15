@@ -100,12 +100,12 @@ Failure to create that backup blocks publication and preserves the original.
 Run the v1 fixture suite unchanged and the v2 suite separately:
 
 ```sh
-.venv/bin/python tools/contract-check/validate.py
-.venv/bin/python tools/contract-check/validate.py --version 2
-.venv/bin/python tools/api-check/check.py --output artifacts/reset-calendar-days/backend
+.venv/bin/python tests/contracts/validate.py
+.venv/bin/python tests/contracts/validate.py --version 2
+.venv/bin/python tests/desktop/check.py
 ```
 
-`generate_v2.py` reproducibly builds synthetic calendar fixtures. Go tests verify
+`tests/contracts/generate_v2.py` reproducibly builds synthetic calendar fixtures. Go tests verify
 retention with 60 simulated dates and restart/publication failures; those tests do
 not require waiting for real dates or reading the user's credentials.
 

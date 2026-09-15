@@ -19,7 +19,7 @@ var testNow = time.Unix(2000000000-3600, 0)
 
 func sourceFixture(t *testing.T, name string) []byte {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("../../tools/collector-probe/testdata", name+".json"))
+	b, err := os.ReadFile(filepath.Join("testdata", name+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}

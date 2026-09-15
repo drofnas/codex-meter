@@ -108,12 +108,25 @@ are not copied back; edit this repository and sync again for subsequent changes.
 - `codex-meter-1.yaml`: hardware, Wi-Fi, network client and heartbeat.
 - `firmware/components/meter_network/`: bounded HTTP transport, cached model,
   and a fixed-size bitmap renderer without external font downloads.
-- `tools/display-check/`: native fixture images, bounds checks and physical validation.
+- `tests/`: desktop unit/integration tests, contract validation, and native firmware/display checks.
 - `scripts/firmware.py`: validate, build, flash, verify, logs, and dashboard sync.
 - `scripts/capture_serial.py`: bounded log recording; run with an interpreter
   containing pyserial. `--reset` pulses EN for a fresh boot.
 - `artifacts/`: ignored build/flash/boot logs and generated firmware copies.
 - `artifacts/private/`: ignored local backups and private diagnostic records.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `cmd/`, `internal/` | Go collector and API, shared calendar logic, and Go unit tests. |
+| `scripts/` | Install/manage the desktop service, build/flash firmware, and run publication checks. |
+| `firmware/`, `codex-meter-1.yaml` | ESPHome component and board configuration. |
+| `contracts/` | Versioned protocol schemas and synthetic fixtures used by the tests. |
+| `tests/` | Maintained development checks; not required by the running service. |
+| `docs/installation.md` | Desktop service setup and operation. |
+| `.local/`, `secrets.yaml` | Ignored installation state and private configuration. |
+| `.esphome/`, `artifacts/` | Ignored generated builds, optional test output, and private backups. |
 
 Firmware binaries embed Wi-Fi credentials and the meter token. Keep all personal
 builds, screenshots, and serial/usage captures private. Publish source and synthetic

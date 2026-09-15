@@ -11,7 +11,7 @@ for development and firmware builds.
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt -r tools/contract-check/requirements.txt
+.venv/bin/python -m pip install -r requirements.txt -r tests/requirements.txt
 ```
 
 The Go module's minimum version allows Go's toolchain selection to download a
@@ -23,19 +23,18 @@ Run from the repository root. These checks use synthetic data and temporary
 loopback servers. They do not contact Codex, flash hardware, or change services.
 
 ```sh
-.venv/bin/python tools/api-check/check.py --output artifacts/check/backend
-.venv/bin/python -m unittest discover -s tools/lifecycle-check
-.venv/bin/python -m unittest discover -s tools/acceptance-check
-.venv/bin/python tools/firmware-check/check.py
-.venv/bin/python tools/firmware-check/config.py
-.venv/bin/python tools/display-check/check.py --output artifacts/check/display
-.venv/bin/python tools/display-check/check_touch.py --output artifacts/check/touch
+.venv/bin/python tests/desktop/check.py
+.venv/bin/python tests/firmware/check.py
+.venv/bin/python tests/firmware/config.py
+.venv/bin/python tests/display/check.py
+.venv/bin/python tests/display/check_touch.py
 ```
 
 The backend wrapper includes formatting, race tests, `go vet`, native builds,
-both contract versions, CLI privacy checks, and API/history validation. Firmware
-checks use AddressSanitizer and UndefinedBehaviorSanitizer. Hardware acceptance
-requires a separate local run following the tool READMEs; keep its evidence private.
+both contract versions, Python configuration/lifecycle unit tests, CLI privacy
+checks, and API/history validation. Firmware checks use AddressSanitizer and
+UndefinedBehaviorSanitizer. Outputs are temporary by default; use `--output`
+under `artifacts/` to retain a run. See [tests/README.md](tests/README.md).
 
 ## Publication checks
 
@@ -46,9 +45,8 @@ go install github.com/zricethezav/gitleaks/v8@v8.30.1
 go install golang.org/x/vuln/cmd/govulncheck@latest
 export PATH="$(go env GOPATH)/bin:$PATH"
 python3 scripts/check_secrets.py
-python3 -m unittest discover -s tools/security-check
+python3 -m unittest discover -s tests/security
 govulncheck ./...
-(cd tools/collector-probe && govulncheck ./...)
 ```
 
 The publication script scans tracked files and non-ignored new files, rejects

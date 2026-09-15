@@ -86,8 +86,8 @@ Defaults are a 32 MiB container memory/swap limit, 24 MiB Go soft memory target,
 0.25 CPU cap, 64 tasks and two Go processors. The cap is a ceiling, not expected
 CPU use. Launcher overrides are `--memory-mib` (16–48), `--cpu-limit` (0.01–1),
 `--pids-limit` (32–128) and `--gid`. Limits remain below the project's intended
-small-service scale; the combined collector/API budget still needs CM-010's
-15-minute measurement. Docker Desktop VM overhead is separate.
+small-service scale. Measure combined collector/API resource use on the target
+host when changing runtime behavior; Docker Desktop VM overhead is separate.
 
 Header/read, write and idle timeouts are 5s, 10s and 30s, with an 8 KiB HTTP header
 setting. There are no access logs or raw error logs; startup errors are fixed
@@ -97,13 +97,12 @@ restarts the service after a process failure or daemon restart; restarting it
 never touches collector state. A broken snapshot does not restart the process.
 
 Docker Desktop's host-to-VM sharing can briefly delay visibility of a file
-replacement. The container check measures this interval and requires convergence
-within three seconds; every interim body must still be contract-valid. The API
-itself holds no snapshot cache. Physical CYD network/reconnect checks are CM-006.
+replacement. The API itself holds no snapshot cache. Check device freshness
+and recovery on the target LAN after deployment changes.
 
 ## Validation
 
-Use the [API validation tools](../../tools/api-check/README.md). The HTTP table
+Use the [desktop checks](../../tests/README.md#desktop-service). The HTTP table
 and full format/semantic rules remain in the normative contract. Malformed HTTP
 framing rejected by Go before dispatch is a transport failure, not a JSON route
 response.
