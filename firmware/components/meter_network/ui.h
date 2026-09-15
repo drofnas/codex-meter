@@ -10,10 +10,12 @@ constexpr uint32_t BG = 0x101820, INK = 0xF3F6F7, MUTED = 0xAAB8C2;
 constexpr uint32_t TRACK = 0x324450, GOOD = 0x63DFC1, WARN = 0xFFC269;
 constexpr uint32_t RESET_BLUE = 0x60BFFF, RESET_YELLOW = 0xFFE060, RESET_RED = 0xFF6060;
 constexpr int WIDTH = 320, HEIGHT = 240, BAR_HEIGHT = 38;
+constexpr int PORTRAIT_BAR_WIDTH = 168;
 struct Bar {
   char label[3] = "--", value[8] = "?";
   uint8_t height = 0;
   char coverage = 'U'; // complete, partial, unknown, future
+  uint8_t percent = 0, width = 0; // Portrait values; retain full precision when sizing the fill.
 };
 struct Frame {
   char quota[8] = "--%", status[6] = "WAIT", age[24] = "CONNECTING WIFI";
@@ -23,8 +25,10 @@ struct Frame {
   uint8_t day_count = 7;
   uint16_t gauge = 0;
   bool stale = false, reset_due = false, known = false;
+  int8_t today = -1;
   Bar bars[9];
 };
+static_assert(sizeof(Frame) <= 256, "Keep the frozen display frame bounded");
 inline Frame project(const State &state, uint64_t now, bool wifi) {
   Frame f;
   f.known = state.accepted && state.model.observed >= 0;
@@ -48,12 +52,14 @@ inline Frame project(const State &state, uint64_t now, bool wifi) {
   else std::snprintf(f.quota, sizeof(f.quota), "%.0f%%", m.remaining);
   f.gauge = static_cast<uint16_t>(std::lround(m.remaining * 296 / 100));
   std::memcpy(f.date,m.reset_local,10); f.date[10]=0;
-  const int hour=(m.reset_local[11]-'0')*10+m.reset_local[12]-'0';
-  std::snprintf(f.time,sizeof(f.time),"%d:%.2s %s",hour%12?hour%12:12,m.reset_local+14,hour<12?"AM":"PM");
+  const unsigned hour=(m.reset_local[11]-'0')*10+m.reset_local[12]-'0';
+  std::snprintf(f.time,sizeof(f.time),"%u:%.2s %s",hour%12?hour%12:12,m.reset_local+14,hour<12?"AM":"PM");
   std::snprintf(f.reset,sizeof(f.reset),"%s %s",f.date,f.time);
-  const int oh=(m.reset_local[18]-'0')*10+m.reset_local[19]-'0', om=(m.reset_local[21]-'0')*10+m.reset_local[22]-'0';
-  if(om) std::snprintf(f.offset,sizeof(f.offset),"(%c%d:%02d)",m.reset_local[17],oh,om);
-  else if(oh) std::snprintf(f.offset,sizeof(f.offset),"(%c%d)",m.reset_local[17],oh);
+  // The decoder validates these digits; explicit bounds also prove the buffer sizes to GCC.
+  const unsigned oh=static_cast<unsigned>((m.reset_local[18]-'0')*10+m.reset_local[19]-'0')%100;
+  const unsigned om=static_cast<unsigned>((m.reset_local[21]-'0')*10+m.reset_local[22]-'0')%100;
+  if(om) std::snprintf(f.offset,sizeof(f.offset),"(%c%u:%02u)",m.reset_local[17],oh,om);
+  else if(oh) std::snprintf(f.offset,sizeof(f.offset),"(%c%u)",m.reset_local[17],oh);
   else std::strcpy(f.offset,"(0)");
   f.day_count=m.day_count;
   f.reset_due = state.as_of(now) >= static_cast<uint64_t>(m.reset);
@@ -67,11 +73,15 @@ inline Frame project(const State &state, uint64_t now, bool wifi) {
                 age > 99999 ? ">" : "", static_cast<unsigned long long>(std::min<uint64_t>(age, 99999)), unit);
   for (size_t i = 0; i < f.day_count; ++i) {
     const Day d = state.day(i, now); auto &b = f.bars[i];
+    if (as_of >= static_cast<uint64_t>(d.start) && as_of < static_cast<uint64_t>(d.end))
+      f.today = static_cast<int8_t>(i);
     std::strcpy(b.label, d.label);
     b.coverage = eq(d.coverage, "complete") ? 'C' : eq(d.coverage, "partial") ? 'P' :
                  eq(d.coverage, "future") ? 'F' : 'U';
     if (b.coverage == 'U') continue;
     if (b.coverage == 'F') { std::strcpy(b.value, "0>"); continue; }
+    b.percent = static_cast<uint8_t>(std::lround(d.delta));
+    b.width = d.delta <= 0 ? 0 : std::max(1L, std::lround(d.delta * PORTRAIT_BAR_WIDTH / 100));
     const char *prefix = b.coverage == 'P' ? "~" : "";
     if (d.delta > 0 && d.delta < 1) std::snprintf(b.value, sizeof(b.value), "%s<1", prefix);
     else std::snprintf(b.value, sizeof(b.value), "%s%.0f", prefix, d.delta);
@@ -82,10 +92,11 @@ inline Frame project(const State &state, uint64_t now, bool wifi) {
 inline bool equal(const Frame &a, const Frame &b) {
   if (!eq(a.resets,b.resets) || a.resets_color != b.resets_color || !eq(a.quota,b.quota) || !eq(a.status,b.status) || !eq(a.age,b.age) ||
       !eq(a.reset,b.reset) || !eq(a.offset,b.offset) || a.gauge != b.gauge ||
-      a.stale != b.stale || a.reset_due != b.reset_due || a.known != b.known || a.day_count != b.day_count) return false;
+      a.stale != b.stale || a.reset_due != b.reset_due || a.known != b.known || a.day_count != b.day_count || a.today != b.today) return false;
   for (size_t i=0;i<a.day_count;++i) {
     const auto &x=a.bars[i]; const auto &y=b.bars[i];
-    if (!eq(x.label,y.label) || !eq(x.value,y.value) || x.height!=y.height || x.coverage!=y.coverage) return false;
+    if (!eq(x.label,y.label) || !eq(x.value,y.value) || x.height!=y.height || x.coverage!=y.coverage ||
+        x.percent!=y.percent || x.width!=y.width) return false;
   }
   return true;
 }
@@ -118,69 +129,97 @@ inline const uint8_t *glyph(char c) {
   return symbols[5]; // Missing glyphs stay visible during validation.
 }
 inline int text_width(const char *s, int scale) { return *s ? (6 * std::strlen(s)-1)*scale : 0; }
-template<class Canvas> void text(Canvas &c,int x,int y,const char *s,int scale,uint32_t color) {
+template<class Canvas> void text(Canvas &c,int x,int y,const char *s,int scale,uint32_t color,int fill_end=-1) {
   for(;*s;++s,x+=6*scale) {
     const auto *g=glyph(*s);
     for(int col=0;col<5;++col)for(int row=0;row<7;++row)
-      if(g[col]&(1<<row))c.rect(x+col*scale,y+row*scale,scale,scale,color);
+      // Portrait bar values use scale 1, switching ink exactly at the fill boundary.
+      if(g[col]&(1<<row))c.rect(x+col*scale,y+row*scale,scale,scale,x+col*scale<fill_end?BG:color);
+  }
+}
+template<class Canvas> void reset_counter(Canvas &c,const Frame &f,int left,int right,int y) {
+  if (!f.resets[0]) return;
+  const int scale = 14+4+text_width(f.resets,2) <= right-left ? 2 : 1;
+  const int icon = 7*scale, group = icon+4+text_width(f.resets,scale);
+  const int x = right-group;
+  static constexpr uint8_t reload[7] = {0x1C,0x22,0x41,0x41,0x45,0x26,0x16};
+  for(int col=0;col<7;++col)for(int row=0;row<7;++row)
+    if(reload[col]&(1<<row))c.rect(x+col*scale,y+row*scale,scale,scale,f.resets_color);
+  text(c,x+icon+4,y,f.resets,scale,f.resets_color);
+}
+inline const char *weekday(const char *label) {
+  static constexpr const char *short_labels[] = {"M","T","W","Th","F","Sa","Su"};
+  static constexpr const char *names[] = {"MON","TUE","WED","THU","FRI","SAT","SUN"};
+  for (size_t i=0;i<7;++i) if (eq(label,short_labels[i])) return names[i];
+  return "--";
+}
+inline void portrait_value(const Bar &b,char (&value)[5]) {
+  if (b.coverage=='U') std::strcpy(value,"?");
+  else std::snprintf(value,sizeof(value),"%u%%",static_cast<unsigned>(b.percent));
+}
+template<class Canvas> void draw_portrait(Canvas &c,const Frame &f) {
+  c.rect(0,0,240,320,BG);
+  const auto accent = f.stale ? WARN : GOOD;
+  text(c,orientation::TITLE_X,orientation::TITLE_Y,"CODEX",2,INK);
+  reset_counter(c,f,orientation::TITLE.x+orientation::TITLE.width,228,10);
+  text(c,12,42,f.quota,6,f.known?accent:MUTED);
+  text(c,156,49,"WEEKLY",1,INK);
+  text(c,156,64,"REMAINING",1,MUTED);
+  c.rect(12,92,216,5,TRACK);
+  const int gauge = (f.gauge*216+148)/296;
+  if(gauge)c.rect(12,92,gauge,5,accent);
+  text(c,12,106,f.reset_due?"RESET DUE - LAST KNOWN":"RESETS AT",1,f.reset_due?WARN:MUTED);
+  text(c,12,119,f.reset,1,INK);
+  text(c,12+text_width(f.reset,1)+6,119,f.offset,1,INK);
+  c.rect(12,135,216,1,TRACK);
+  text(c,12,145,"DAILY USAGE %",1,MUTED);
+  for(int i=0;i<f.day_count;++i) {
+    const auto &b=f.bars[i];
+    const int y=162+i*(f.day_count==9?18:20);
+    const auto color=i==f.today?RESET_YELLOW:GOOD;
+    text(c,12,y,weekday(b.label),2,color);
+    c.rect(60,y,PORTRAIT_BAR_WIDTH,14,TRACK);
+    if(b.width)c.rect(60,y,b.width,14,color);
+    char value[5]; portrait_value(b,value);
+    text(c,60+(PORTRAIT_BAR_WIDTH-text_width(value,1))/2,y+4,value,1,INK,60+b.width);
   }
 }
 template<class Canvas> void draw(Canvas &c,const Frame &f,uint8_t position=0) {
-  const bool portrait = position & 1;
+  if (position & 1) { draw_portrait(c,f); return; }
   const int width = orientation::width(position), height = orientation::height(position);
   c.rect(0,0,width,height,BG);
   const auto accent = f.stale ? WARN : GOOD;
   text(c,orientation::TITLE_X,orientation::TITLE_Y,"CODEX",2,INK);
   c.rect(width-90,14,6,6,f.known?accent:MUTED);
   text(c,width-76,10,f.status,2,f.known?accent:MUTED);
-  const int quota_y = portrait ? 42 : 35;
+  const int quota_y = 35;
   const int counter_right = width-18;
-  const int counter_left = portrait ? 12+text_width(f.quota,6)+2 : 258;
+  const int counter_left = 258;
   // Very long counts need the landscape label's space; keep that label below.
-  const bool compact_label = !portrait && f.resets[0] &&
+  const bool compact_label = f.resets[0] &&
       7+4+text_width(f.resets,1) > counter_right-counter_left;
-  if (f.resets[0]) {
-    const int left = compact_label ? 180 : counter_left;
-    const int scale = 14+4+text_width(f.resets,2) <= counter_right-left ? 2 : 1;
-    const int icon = 7*scale, group = icon+4+text_width(f.resets,scale);
-    const int x = counter_right-group, y = quota_y;
-    static constexpr uint8_t reload[7] = {0x1C,0x22,0x41,0x41,0x45,0x26,0x16};
-    for(int col=0;col<7;++col)for(int row=0;row<7;++row)
-      if(reload[col]&(1<<row))c.rect(x+col*scale,y+row*scale,scale,scale,f.resets_color);
-    text(c,x+icon+4,y,f.resets,scale,f.resets_color);
-  }
+  reset_counter(c,f,compact_label?180:counter_left,counter_right,quota_y);
   text(c,12,quota_y,f.quota,6,f.known?accent:MUTED);
-  if (portrait) {
-    text(c,12,98,"WEEKLY REMAINING",2,MUTED);
-    text(c,12,131,f.age,1,f.stale?WARN:MUTED);
-  } else {
-    if (compact_label) text(c,180,58,"WEEKLY REMAINING",1,MUTED);
-    else { text(c,180,38,"WEEKLY",2,INK); text(c,180,58,"REMAINING",2,MUTED); }
-    text(c,180,77,f.age,1,f.stale?WARN:MUTED);
-  }
-  const int gauge_y = portrait ? 119 : 88;
+  if (compact_label) text(c,180,58,"WEEKLY REMAINING",1,MUTED);
+  else { text(c,180,38,"WEEKLY",2,INK); text(c,180,58,"REMAINING",2,MUTED); }
+  text(c,180,77,f.age,1,f.stale?WARN:MUTED);
+  const int gauge_y = 88;
   const int gauge = (f.gauge * (width-24) + 148) / 296;
   c.rect(12,gauge_y,width-24,5,TRACK);
   if(gauge)c.rect(12,gauge_y,gauge,5,accent);
-  text(c,12,portrait?153:100,f.reset_due?"RESET DUE - LAST KNOWN":"RESETS AT",1,f.reset_due?WARN:MUTED);
-  if(portrait) {
-    text(c,12,165,f.date,2,INK);
-    text(c,12,186,f.time,2,INK);
-    text(c,12+text_width(f.time,2)+12,186,f.offset,2,INK);
-  } else {
-    text(c,12,112,f.reset,2,INK);
-    const int x=12+text_width(f.reset,2)+12;
-    const int scale=x+text_width(f.offset,2)<=width-12?2:1;
-    text(c,x,112+(2-scale)*7,f.offset,scale,INK);
-  }
-  text(c,12,portrait?216:138,"DAILY USE / WEEKLY PP",1,MUTED);
-  text(c,width-66,portrait?216:138,"0-100",1,MUTED);
-  const int baseline = portrait ? 279 : 197;
-  const int slots=f.day_count, spacing=(width-24)/slots, bar_width=std::min(portrait?18:22,spacing-6);
+  text(c,12,100,f.reset_due?"RESET DUE - LAST KNOWN":"RESETS AT",1,f.reset_due?WARN:MUTED);
+  text(c,12,112,f.reset,2,INK);
+  const int offset_x=12+text_width(f.reset,2)+12;
+  const int offset_scale=offset_x+text_width(f.offset,2)<=width-12?2:1;
+  text(c,offset_x,112+(2-offset_scale)*7,f.offset,offset_scale,INK);
+  text(c,12,138,"DAILY USE / WEEKLY PP",1,MUTED);
+  text(c,width-66,138,"0-100",1,MUTED);
+  const int baseline = 197;
+  const int slots=f.day_count, spacing=(width-24)/slots, bar_width=std::min(22,spacing-6);
   for(int i=0;i<slots;++i) {
     const auto &b=f.bars[i]; int center=12+(2*i+1)*(width-24)/(2*slots), x=center-bar_width/2;
     uint32_t color=b.coverage=='P'?WARN:b.coverage=='C'?GOOD:MUTED;
-    text(c,center-text_width(b.value,1)/2,portrait?232:151,b.value,1,color);
+    text(c,center-text_width(b.value,1)/2,151,b.value,1,color);
     // Zero-height future/measured bars remain zero; explicit values distinguish them.
     c.rect(x,baseline,bar_width,1,TRACK);
     if(b.height) {
@@ -188,8 +227,8 @@ template<class Canvas> void draw(Canvas &c,const Frame &f,uint8_t position=0) {
       c.rect(x,y,bar_width,b.height,color);
       if(b.coverage=='P')for(int row=y+2;row<baseline;row+=4)c.rect(x,row,bar_width,1,BG);
     }
-    text(c,center-text_width(b.label,2)/2,portrait?287:203,b.label,2,b.coverage=='F'?MUTED:INK);
+    text(c,center-text_width(b.label,2)/2,203,b.label,2,b.coverage=='F'?MUTED:INK);
   }
-  text(c,12,portrait?309:226,"~PARTIAL  ?UNKNOWN  >FUTURE",1,MUTED);
+  text(c,12,226,"~PARTIAL  ?UNKNOWN  >FUTURE",1,MUTED);
 }
 } // namespace meter::ui

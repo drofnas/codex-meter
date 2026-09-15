@@ -1,0 +1,16 @@
+[extend]
+useDefault = true
+
+# SHA-256 digests of the synthetic auth-failure display fixtures, verified against
+# the original PPM renders. Limit this exception to these complete JSON entries
+# in this one file, including their historical appearances; scan everything else.
+[[allowlists]]
+description = "Known synthetic landscape image checksums"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)tests/display/landscape\.sha256\.json$''']
+regexTarget = "line"
+regexes = [
+  '''^\s*"auth-failed(?:-inverted)?"\s*:\s*"9f914feaa2679756117e00618224561715252685063dc9e5cbb730c915e1d040",?\s*$''',
+  '''^\s*"unavailable-auth(?:-inverted)?"\s*:\s*"529dded38bf64e9192f5c27cd9f33dd185b765f9620769d7548e5dedb4ab2744",?\s*$''',
+]

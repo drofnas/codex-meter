@@ -130,14 +130,16 @@ weekly reading with unknown expiration; it never reuses an old expiration as
 fresh. There are at most two GETs per default 60-second successful poll and no
 redemption request, control route, or credential refresh.
 
-The display shows only a reload icon and exact count on the right below FRESH/STALE,
-top-aligned with the main weekly percentage, hidden for zero/unavailable count.
+The display shows only a reload icon and exact count on the right, hidden for
+zero/unavailable count. Landscape places it below FRESH/STALE, top-aligned with
+the main weekly percentage; portrait places it in the top-right header.
 It uses blue above seven days,
 yellow from four through seven days inclusive, and red below four days. These are
 elapsed 24-hour days to the earliest expiration; exactly seven days is yellow.
-Unknown expiration uses neutral gray. Count freshness shares the adjacent state
-and age of its usage observation. On source or transport failure, cached facts
-remain under STALE. Once the known earliest expiration passes, hide the indicator
+Unknown expiration uses neutral gray. Count freshness shares the state and age
+of its usage observation. On source or transport failure, cached facts remain;
+landscape shows STALE and portrait retains the weekly warning color without
+status or age text. Once the known earliest expiration passes, hide the indicator
 until a newer authoritative poll establishes the remaining count and next expiry;
 never guess how many expired or were used. A fresh poll after a reset used
 elsewhere replaces both count and expiration together.
