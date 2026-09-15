@@ -79,12 +79,10 @@ inline Frame project(const State &state, uint64_t now, bool wifi) {
     b.coverage = eq(d.coverage, "complete") ? 'C' : eq(d.coverage, "partial") ? 'P' :
                  eq(d.coverage, "future") ? 'F' : 'U';
     if (b.coverage == 'U') continue;
-    if (b.coverage == 'F') { std::strcpy(b.value, "0>"); continue; }
+    if (b.coverage == 'F') { std::strcpy(b.value, "0"); continue; }
     b.percent = static_cast<uint8_t>(std::lround(d.delta));
     b.width = d.delta <= 0 ? 0 : std::max(1L, std::lround(d.delta * PORTRAIT_BAR_WIDTH / 100));
-    const char *prefix = b.coverage == 'P' ? "~" : "";
-    if (d.delta > 0 && d.delta < 1) std::snprintf(b.value, sizeof(b.value), "%s<1", prefix);
-    else std::snprintf(b.value, sizeof(b.value), "%s%.0f", prefix, d.delta);
+    std::snprintf(b.value, sizeof(b.value), "%u", static_cast<unsigned>(b.percent));
     b.height = d.delta <= 0 ? 0 : std::max(1L, std::lround(d.delta * BAR_HEIGHT / 100));
   }
   return f;
@@ -190,19 +188,11 @@ template<class Canvas> void draw(Canvas &c,const Frame &f,uint8_t position=0) {
   c.rect(0,0,width,height,BG);
   const auto accent = f.stale ? WARN : GOOD;
   text(c,orientation::TITLE_X,orientation::TITLE_Y,"CODEX",2,INK);
-  c.rect(width-90,14,6,6,f.known?accent:MUTED);
-  text(c,width-76,10,f.status,2,f.known?accent:MUTED);
+  reset_counter(c,f,orientation::TITLE.x+orientation::TITLE.width,width-12,10);
   const int quota_y = 35;
-  const int counter_right = width-18;
-  const int counter_left = 258;
-  // Very long counts need the landscape label's space; keep that label below.
-  const bool compact_label = f.resets[0] &&
-      7+4+text_width(f.resets,1) > counter_right-counter_left;
-  reset_counter(c,f,compact_label?180:counter_left,counter_right,quota_y);
   text(c,12,quota_y,f.quota,6,f.known?accent:MUTED);
-  if (compact_label) text(c,180,58,"WEEKLY REMAINING",1,MUTED);
-  else { text(c,180,38,"WEEKLY",2,INK); text(c,180,58,"REMAINING",2,MUTED); }
-  text(c,180,77,f.age,1,f.stale?WARN:MUTED);
+  text(c,180,38,"WEEKLY",2,INK);
+  text(c,180,58,"REMAINING",2,MUTED);
   const int gauge_y = 88;
   const int gauge = (f.gauge * (width-24) + 148) / 296;
   c.rect(12,gauge_y,width-24,5,TRACK);
@@ -212,23 +202,21 @@ template<class Canvas> void draw(Canvas &c,const Frame &f,uint8_t position=0) {
   const int offset_x=12+text_width(f.reset,2)+12;
   const int offset_scale=offset_x+text_width(f.offset,2)<=width-12?2:1;
   text(c,offset_x,112+(2-offset_scale)*7,f.offset,offset_scale,INK);
-  text(c,12,138,"DAILY USE / WEEKLY PP",1,MUTED);
-  text(c,width-66,138,"0-100",1,MUTED);
+  text(c,12,138,"DAILY USAGE %",1,MUTED);
   const int baseline = 197;
   const int slots=f.day_count, spacing=(width-24)/slots, bar_width=std::min(22,spacing-6);
   for(int i=0;i<slots;++i) {
     const auto &b=f.bars[i]; int center=12+(2*i+1)*(width-24)/(2*slots), x=center-bar_width/2;
-    uint32_t color=b.coverage=='P'?WARN:b.coverage=='C'?GOOD:MUTED;
+    const bool today=i==f.today;
+    const uint32_t color=today?RESET_YELLOW:(b.coverage=='P'||b.coverage=='C')?GOOD:MUTED;
     text(c,center-text_width(b.value,1)/2,151,b.value,1,color);
-    // Zero-height future/measured bars remain zero; explicit values distinguish them.
+    // Future and measured zero share a plain zero and retain zero bar height.
     c.rect(x,baseline,bar_width,1,TRACK);
     if(b.height) {
       int y=baseline-b.height;
       c.rect(x,y,bar_width,b.height,color);
-      if(b.coverage=='P')for(int row=y+2;row<baseline;row+=4)c.rect(x,row,bar_width,1,BG);
     }
-    text(c,center-text_width(b.label,2)/2,203,b.label,2,b.coverage=='F'?MUTED:INK);
+    text(c,center-text_width(b.label,2)/2,203,b.label,2,today?RESET_YELLOW:b.coverage=='F'?MUTED:INK);
   }
-  text(c,12,226,"~PARTIAL  ?UNKNOWN  >FUTURE",1,MUTED);
 }
 } // namespace meter::ui

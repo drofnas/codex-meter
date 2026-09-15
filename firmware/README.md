@@ -9,9 +9,9 @@ replayed across all four buffer pages, preventing mixed-frame text or bars.
 
 Tap and release **CODEX** to turn the view a quarter turn. Starting in the original
 landscape position, the bottom moves to the original right, top, left, then bottom
-edge. Portrait uses a 240×320 layout with the full reset date/time on one line; the
-original 320×240 landscape layout is unchanged. Hold does not repeat, and dragging
-outside the title cancels the tap. The touch target includes padding around the
+edge. Portrait uses a 240×320 layout with the full reset date/time on one line;
+landscape uses a 320×240 layout with vertical daily bars. Hold does not repeat,
+and dragging outside the title cancels the tap. The touch target includes padding around the
 title. Contacts shorter than 40 ms and new contacts within 180 ms of release are
 ignored to reduce noise and bounce.
 
@@ -38,17 +38,18 @@ The quota number is rounded to the nearest whole percent; positive values below
 1% show `<1%`, and values above 99% but below 100% show `>99%`. The gauge follows
 the underlying value. Reset text retains the full local date, 12-hour time and
 explicit UTC offset. `RESET DUE - LAST KNOWN` preserves the old quota/history
-until a valid new observation arrives. In landscape, `FRESH`, `STALE`, `WAIT` and
-a compact age or offline marker make status visible independently of color.
-Portrait omits status and age; the weekly value and gauge retain their stale
-warning color in both layouts.
+until a valid new observation arrives. Both layouts omit status and age text;
+the weekly value and gauge retain their stale warning color.
 
 Daily bars use a fixed 0–100 percentage-point scale of weekly allowance. In
-landscape, complete values are solid; partial values use `~` and stripes. Measured zero is `0`,
-partial zero `~0`, unknown history `?`, and future zero `0>` with zero bar height.
-Positive values below one point show `<1` (or `~<1`) with a one-pixel bar. The footer
-explains coverage symbols. Supplied labels, including repeated weekdays across
-DST, retain their slot order.
+landscape, `DAILY USAGE %` contains solid vertical bars and rounded whole numbers
+without coverage prefixes or a percent sign. Measured, partial, and future zero
+all show `0`; unknown history shows `?`. Positive fractions may round to `0`
+while retaining at least one filled pixel. There is no scale callout or footer
+legend. Today's number, bar, and weekday are yellow. Other known values/bars
+are cyan, unknown/future values are muted, and other weekday labels retain their
+white/muted colors. Supplied labels, including repeated weekdays across DST,
+retain their slot order.
 
 Portrait places `WEEKLY REMAINING` beside the large quota value, then the gauge,
 compact reset timestamp, and `DAILY USAGE %` list. All 7–9 calendar intervals fit,
@@ -58,8 +59,8 @@ future and measured zero both show `0%`, and unknown shows `?`. There are no
 coverage prefixes, stripes, or legend. Positive fractions can round to `0%` while
 retaining at least one filled pixel. Bar width follows the underlying usage.
 Today's weekday and fill are yellow; every other day is blue/cyan, regardless
-of coverage or usage. The highlight follows the source calendar interval using
-the advancing cached time, so repeated weekdays, daylight-saving boundaries,
+of coverage or usage. In both layouts the highlight follows the source calendar
+interval using the advancing cached time, so repeated weekdays, daylight-saving boundaries,
 and offline midnight transitions select the correct row. An expired cycle has
 no highlighted row until a new confirmed cycle contains the current time.
 
@@ -120,8 +121,7 @@ private secrets. Native checks are documented in
 [tests/README.md](../tests/README.md#firmware-and-display).
 
 The display includes a compact reload icon plus available-reset count on the
-right. Landscape places it below freshness, aligned with the main percentage;
-portrait places it in the top-right header beside `CODEX`.
+right. Both layouts place it in the top-right header beside `CODEX`.
 Zero/unknown count leaves no indicator.
 The earliest available expiration controls blue (>7 days), yellow (4–7 days), or
 red (<4 days); unknown expiration is gray. The existing state/age applies to the

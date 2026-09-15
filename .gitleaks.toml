@@ -2,8 +2,8 @@
 useDefault = true
 
 # SHA-256 digests of the synthetic auth-failure display fixtures, verified against
-# the original PPM renders. Limit this exception to these complete JSON entries
-# in this one file, including their historical appearances; scan everything else.
+# the original and revised PPM renders. Limit this exception to complete JSON
+# entries in this one file, including historical appearances; scan everything else.
 [[allowlists]]
 description = "Known synthetic landscape image checksums"
 targetRules = ["generic-api-key"]
@@ -13,4 +13,6 @@ regexTarget = "line"
 regexes = [
   '''^\s*"auth-failed(?:-inverted)?"\s*:\s*"9f914feaa2679756117e00618224561715252685063dc9e5cbb730c915e1d040",?\s*$''',
   '''^\s*"unavailable-auth(?:-inverted)?"\s*:\s*"529dded38bf64e9192f5c27cd9f33dd185b765f9620769d7548e5dedb4ab2744",?\s*$''',
+  '''^\s*"auth-failed(?:-inverted)?"\s*:\s*"1ff97350c07f93125d24ff33c9be69011b98c211e306d124e251f4aef4559212",?\s*$''',
+  '''^\s*"unavailable-auth(?:-inverted)?"\s*:\s*"54373b860c120f7f483e7601d59b2db29d303b55fc3a5fc3ef7bc83c4e1518ac",?\s*$''',
 ]
