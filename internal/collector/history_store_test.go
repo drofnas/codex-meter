@@ -121,6 +121,10 @@ func TestHistoryStateValidationAndMigration(t *testing.T) {
 	}{
 		{"missing-history", func(v map[string]any) { delete(v, "history") }},
 		{"null-history", func(v map[string]any) { v["history"] = nil }},
+		{"missing-high-used", func(v map[string]any) { delete(v["history"].(map[string]any), "high_used") }},
+		{"null-high-used", func(v map[string]any) { v["history"].(map[string]any)["high_used"] = nil }},
+		{"negative-high-used", func(v map[string]any) { v["history"].(map[string]any)["high_used"] = -1 }},
+		{"low-high-used", func(v map[string]any) { v["history"].(map[string]any)["high_used"] = 24 }},
 		{"missing-known", func(v map[string]any) {
 			delete(v["history"].(map[string]any)["days"].([]any)[0].(map[string]any), "known")
 		}},
@@ -144,7 +148,7 @@ func TestHistoryStateValidationAndMigration(t *testing.T) {
 			v["history"].(map[string]any)["days"].([]any)[0].(map[string]any)["covered_until"] = 2000000000 - week + day
 		}},
 		{"ambiguous-baseline", func(v map[string]any) { v["history"].(map[string]any)["state"] = "ambiguous" }},
-		{"bad-version", func(v map[string]any) { v["version"] = 4 }},
+		{"bad-version", func(v map[string]any) { v["version"] = 5 }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var v map[string]any
@@ -174,7 +178,7 @@ func TestHistoryStateValidationAndMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.state = e.store.load()
-	if e.state.Version != 3 || e.state.Observation == nil || e.state.History.BaselineUsable {
+	if e.state.Version != 4 || e.state.Observation == nil || e.state.History.BaselineUsable {
 		t.Fatal("unsafe migration", e.state)
 	}
 	s := applyHistory(t, e, historyObservation(1120, 35))
@@ -209,11 +213,7 @@ func TestHistoryAmbiguityAndFailurePersist(t *testing.T) {
 		o.ObservedAt += 120
 		o.UsedPercent += 5
 		s := applyHistory(t, e, o)
-		if ambiguous {
-			assertDay(t, s, 0, "unknown", nil)
-		} else {
-			assertDay(t, s, 0, "partial", ptr(5.0))
-		}
+		assertDay(t, s, 0, "partial", ptr(5.0))
 	}
 }
 

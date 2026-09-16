@@ -113,7 +113,7 @@ func TestHistoryDiscontinuities(t *testing.T) {
 		{"equal-time-conflict", func(e *engine, o Observation) (Snapshot, error) {
 			o.UsedPercent++
 			return e.apply(o, nil, o.ObservedAt+30)
-		}, 0, "observed"},
+		}, 5, "observed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := testEngine(t)
@@ -131,11 +131,7 @@ func TestHistoryDiscontinuities(t *testing.T) {
 			if s.Cycle.State != tc.state {
 				t.Fatal(s.Cycle)
 			}
-			if tc.name == "equal-time-conflict" {
-				assertDay(t, s, 0, "unknown", nil)
-			} else {
-				assertDay(t, s, 0, "partial", &tc.want)
-			}
+			assertDay(t, s, 0, "partial", &tc.want)
 			s = applyHistory(t, e, historyObservation(1180, 40))
 			assertDay(t, s, 0, "partial", ptr(tc.want+5))
 			b, _ := encodeSnapshot(s)
@@ -225,12 +221,20 @@ func TestHistoryResetsAndAmbiguity(t *testing.T) {
 				o.UsedPercent = 150
 			}
 			s := applyHistory(t, e, o)
-			if s.Status != "ok" || s.Cycle.State != "ambiguous" || *s.ResetAt != o.ResetAt || e.state.History.StableEnd != anchor || e.state.History.Days != days {
+			wantState := "observed"
+			if name == "early-reset" {
+				wantState = "ambiguous"
+			}
+			if s.Status != "ok" || s.Cycle.State != wantState || *s.ResetAt != o.ResetAt || e.state.History.StableEnd != anchor || e.state.History.Days != days {
 				t.Fatal("ambiguity lost authoritative gauge or stable anchor", s.Cycle, e.state.History)
 			}
 			for i, d := range s.Days {
 				if *d.StartAt <= s.AsOf {
-					assertDay(t, s, i, "unknown", nil)
+					if name == "early-reset" {
+						assertDay(t, s, i, "unknown", nil)
+					} else {
+						assertDay(t, s, i, "partial", ptr(days[0].Used))
+					}
 				}
 			}
 			b, _ := encodeSnapshot(s)
@@ -238,13 +242,21 @@ func TestHistoryResetsAndAmbiguity(t *testing.T) {
 			// A stable pair starts a new baseline without counting the suspect gap.
 			o.ObservedAt += 60
 			s = applyHistory(t, e, o)
-			if s.Cycle.State != "observed" || e.state.History.Days != ([9]historyDay{}) {
+			wantDays := days
+			if name == "early-reset" {
+				wantDays = [9]historyDay{}
+			}
+			if s.Cycle.State != "observed" || e.state.History.Days != wantDays {
 				t.Fatal("recovery fabricated history or confirmed an early reset")
 			}
 			o.ObservedAt += 60
 			o.UsedPercent += 2
 			s = applyHistory(t, e, o)
-			assertDay(t, s, 0, "partial", ptr(2.0))
+			wantUsed := wantDays[0].Used + 2
+			if name == "quota-decrease" {
+				wantUsed = wantDays[0].Used // Still below the pre-correction peak.
+			}
+			assertDay(t, s, 0, "partial", ptr(wantUsed))
 			anchor = e.state.History.StableEnd
 			// A subsequent scheduled transition still confirms normally.
 			for cycle := int64(1); cycle <= 2; cycle++ {

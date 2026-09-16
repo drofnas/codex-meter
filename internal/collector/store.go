@@ -147,7 +147,7 @@ func (s *Store) keyID() string { hash := sha256.Sum256(s.key); return hex.Encode
 
 func (s *Store) load() diskState {
 	s.loadErr = nil
-	empty := diskState{Version: 3, KeyID: s.keyID(), Archive: []Snapshot{}}
+	empty := diskState{Version: 4, KeyID: s.keyID(), Archive: []Snapshot{}}
 	b, err := readFile(filepath.Join(s.config.StateDir, "observation.json"), maxHistoryBytes)
 	if err != nil {
 		return empty
@@ -173,9 +173,24 @@ func (s *Store) load() diskState {
 			return empty
 		}
 		delete(fields, "history")
-		fields["version"] = float64(3)
+		fields["version"] = json.Number("4")
 		fields["history"] = history{}
 		fields["archive"] = []Snapshot{}
+	}
+	if version == 3 {
+		// v3 already has daily evidence. Only the correction baseline is new.
+		h := object(fields["history"])
+		if h == nil {
+			return empty
+		}
+		if _, exists := h["high_used"]; exists {
+			return empty
+		}
+		h["high_used"] = json.Number("0")
+		if o := object(fields["observation"]); o != nil {
+			h["high_used"] = o["used_percent"]
+		}
+		fields["version"] = json.Number("4")
 	}
 	converted, _ := json.Marshal(fields)
 	var state diskState
@@ -194,13 +209,7 @@ func (s *Store) load() diskState {
 		}
 	}
 	if legacy {
-		backup := filepath.Join(s.config.StateDir, "observation.pre-v3.json")
-		if info, err := os.Lstat(backup); os.IsNotExist(err) {
-			if s.atomicWrite(backup, b, 0600) != nil {
-				s.loadErr = errStorage
-				return empty
-			}
-		} else if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+		if s.backupUpgrade(b) != nil {
 			s.loadErr = errStorage
 			return empty
 		}
@@ -224,10 +233,32 @@ func (s *Store) load() diskState {
 	// arrays that encoding/json otherwise silently fills with zero values.
 	encoded, err := json.Marshal(state)
 	var canonical map[string]any
-	if err != nil || strictJSON(encoded, &canonical, false) != nil || !reflect.DeepEqual(fields, canonical) || state.Version != 3 || !state.History.valid(state.Observation) || !state.archiveValid() {
+	if err != nil || strictJSON(encoded, &canonical, false) != nil || !reflect.DeepEqual(fields, canonical) || state.Version != 4 || !state.History.valid(state.Observation) || !state.archiveValid() {
+		return empty
+	}
+	if version == 3 && s.backupUpgrade(b) != nil {
+		s.loadErr = errStorage
 		return empty
 	}
 	return state
+}
+
+func (s *Store) backupUpgrade(b []byte) error {
+	path := filepath.Join(s.config.StateDir, "observation.pre-v4.json")
+	if info, err := os.Lstat(path); os.IsNotExist(err) {
+		return s.atomicWrite(path, b, 0600)
+	} else if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+		return errStorage
+	}
+	return nil
+}
+
+func (s *Store) backup(name string, state diskState) error {
+	b, err := json.Marshal(state)
+	if err != nil || len(b) > maxHistoryBytes {
+		return errStorage
+	}
+	return s.atomicWrite(filepath.Join(s.config.StateDir, name), b, 0600)
 }
 
 func (s *Store) publish(state diskState, current Snapshot) error {

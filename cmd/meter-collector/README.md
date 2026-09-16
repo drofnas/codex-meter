@@ -58,17 +58,20 @@ collection, and stale age 30–3600 seconds and at least twice collection.
 `usage.json` holds only the current reset period and remains capped at 4,096
 bytes. `history.json` exposes retained daily aggregates with a separate 64 KiB
 cap. Neither contains raw account identifiers, credentials, or unrelated account
-fields. Private state v3 combines the active calendar ledger, reset anchor,
-observation baseline, and retained period snapshots in `observation.json`
+fields. Private state v4 combines the active calendar ledger, reset anchor,
+observation and high-water baselines, and retained period snapshots in `observation.json`
 (64 KiB cap), alongside the existing 32-byte `installation.key`.
 
 Periods intersecting the latest 35 days are retained whole. The account scope
 is HMAC-SHA256 under the installation key; an account/key change starts new
-history. Version 1/2 migration backs up the original private file once, preserves
+history. Upgrades save the original private file once as `observation.pre-v4.json`.
+Version 3 migration preserves all existing daily evidence and initializes the
+high-water baseline from the last observation. Version 1/2 migration preserves
 the authoritative observation and ambiguity/reset anchor, starts calendar days
 unknown, and fences the first attribution interval. A failed backup prevents
 publication. Corrupt state starts unknown; an insecure existing key fails
-startup. Older collectors cannot read v3; stop collection and restore the matching
+startup. Replacing an established calendar ledger also saves one bounded
+`observation.previous.json` backup. Older collectors cannot read v4; stop collection and restore the matching
 backup/binaries before rollback. See the [installation guide](../../docs/installation.md).
 
 State must be owner-only (0700 directory, 0600 files). Data is created with 0750
@@ -102,8 +105,8 @@ Source observation timestamps supplied as root `observed_at` are preserved
 and validated. Otherwise the timestamp is response-body completion. Equal observations never become
 newer merely by being replayed; older or conflicting same-time observations
 produce `source_invalid` while retaining the previous reading. Account changes
-replace the baseline and scope. Equal-time conflicts also make the chart
-ambiguous; an older sample is ignored for accounting.
+replace the baseline and scope. Equal-time conflicts break interval coverage
+without clearing daily estimates; an older sample is ignored for accounting.
 
 ## Daily consumption and reset handling
 
@@ -125,23 +128,30 @@ while zero changes can cover both sides. Failed/invalid readings and longer gaps
 break interval coverage. Known portions survive as partial amounts; a closed
 slot is complete only when attributable intervals cover its entire duration.
 
-Reset timestamps within two seconds of the fixed accounting anchor are compatible;
-the source timestamp is still published exactly. Matching calendar intervals retain
-their totals. A changed edge interval is temporarily unknown until its exact
-boundaries match again. The tolerance never follows a moving previous timestamp.
+Reset timestamps within five minutes of the fixed accounting anchor are compatible;
+the source timestamp is still published exactly. Overlapping intervals on the same
+calendar date retain their estimates, with changed edge intervals marked partial.
+The tolerance never follows a moving previous timestamp.
 
-A quota decrease or larger reset-time change makes history ambiguous, including
+A quota decrease preserves earlier daily totals. The collector remembers the
+highest observed usage in the accounting period and adds only increases above it.
+For example, 30% → 29% → 30% adds nothing; a subsequent 31% adds one point.
+This prevents correction/rebound double-counting, but may undercount usage after
+an allowance adjustment. The weekly gauge always follows the current source.
+
+A larger reset-time change makes history ambiguous, including
 early resets performed elsewhere in Codex. The fresh gauge and source reset remain
 visible, but elapsed chart values become unknown. Two timely observations with
 the same reset and nondecreasing usage establish a new observed baseline. The
-interval into that baseline is discarded; the next compatible interval begins
-partial daily accounting. Previously ambiguous installations recover the same way.
+interval into that baseline is discarded, and earlier totals for matching calendar
+intervals survive. The next compatible interval resumes partial daily accounting.
+Previously ambiguous installations recover the same way.
 This does not confirm an early reset or reconstruct missing daily totals. Only
 completed periods and one current snapshot are retained as the reset changes.
 The adapter exposes no trusted early-reset event or allowance-definition
 metadata, so a count decrease alone cannot confirm a reset and hidden allowance
-changes cannot be distinguished. More than 100 observed percentage points also
-makes the ledger ambiguous. This is approximate quota movement, not token or
+changes cannot be distinguished. An increment that would push the total above 100
+points is skipped while preserving earlier estimates. This is approximate quota movement, not token or
 billing accounting. See the [normative interval/reset rules](../../contracts/v2/README.md).
 
 Only a new source observation at or after the current accounting reset, with a

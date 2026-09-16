@@ -129,10 +129,10 @@ func TestLegacyV2IsForwardOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.state = e.store.load()
-	if e.state.Version != 3 || e.state.Observation == nil || e.state.History.BaselineUsable || len(e.state.Archive) != 0 {
+	if e.state.Version != 4 || e.state.Observation == nil || e.state.History.BaselineUsable || len(e.state.Archive) != 0 {
 		t.Fatal("bad migration")
 	}
-	backup, err := os.ReadFile(filepath.Join(e.config.StateDir, "observation.pre-v3.json"))
+	backup, err := os.ReadFile(filepath.Join(e.config.StateDir, "observation.pre-v4.json"))
 	if err != nil || string(backup) != string(raw) {
 		t.Fatal("backup lost")
 	}
@@ -153,7 +153,7 @@ func TestMigrationBackupFailurePreservesOriginal(t *testing.T) {
 	path := filepath.Join(e.config.StateDir, "observation.json")
 	os.WriteFile(path, raw, 0600)
 	e.store.rename = func(from, to string) error {
-		if filepath.Base(to) == "observation.pre-v3.json" {
+		if filepath.Base(to) == "observation.pre-v4.json" {
 			return errStorage
 		}
 		return os.Rename(from, to)
